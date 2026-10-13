@@ -347,7 +347,7 @@ const isShared=it=>!it.scan&&(it.shared||it.who.length!==1);
 /* ---------- scan struk ---------- */
 let scanOK=true,scan={busy:false,msg:'',err:false,ctl:null};
 const SCAN_URL='/api/scan-struk';
-const SCAN_ERR={no_key:'API key Gemini belum dipasang di Netlify (GEMINI_API_KEY).',quota:'Jatah gratis Gemini lagi penuh. Coba lagi beberapa menit lagi.',too_large:'Fotonya kebesaran. Coba foto ulang.',bad_type:'Format foto nggak didukung. Pakai JPG atau PNG.',timeout:'Gemini kelamaan jawab. Coba lagi.',gemini:'Gemini lagi error. Coba lagi sebentar.',bad_key:'API key Gemini ditolak. Cek lagi GEMINI_API_KEY di Netlify, lalu deploy ulang.',network:'Nggak bisa nyambung ke server. Cek internet, dan pastikan app dibuka dari link Netlify, bukan file lokal.'};
+const SCAN_ERR={no_key:'API key Gemini belum dipasang di Netlify (GEMINI_API_KEY).',quota:'Jatah gratis Gemini lagi penuh. Coba lagi beberapa menit lagi.',too_large:'Fotonya kebesaran. Coba foto ulang.',bad_type:'Format foto nggak didukung. Pakai JPG atau PNG.',timeout:'Gemini kelamaan jawab. Coba lagi.',gemini:'Gemini lagi error. Coba lagi sebentar.',busy:'Server Gemini lagi penuh banget. Tunggu 1–2 menit lalu coba foto lagi.',bad_key:'API key Gemini ditolak. Cek lagi GEMINI_API_KEY di Netlify, lalu deploy ulang.',network:'Nggak bisa nyambung ke server. Cek internet, dan pastikan app dibuka dari link Netlify, bukan file lokal.'};
 async function shrink(file){
   try{const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
     const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));const c=document.createElement('canvas');

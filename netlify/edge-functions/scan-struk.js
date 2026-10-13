@@ -32,19 +32,24 @@ function parseJson(text) {
 const API = "https://generativelanguage.googleapis.com/v1beta";
 let autoModel = null; // model hasil pencarian otomatis, disimpan selama function hidup
 
-// Cari model Flash yang tersedia untuk API key ini, kalau model yang diminta tidak ada.
-async function findFlashModel(key) {
+// Daftar model Flash yang tersedia untuk API key ini, urut dari yang paling cocok.
+let flashCache = null;
+async function listFlashModels(key) {
+  if (flashCache) return flashCache;
   const res = await fetch(`${API}/models?pageSize=200`, { headers: { "x-goog-api-key": key } });
-  if (!res.ok) return null;
+  if (!res.ok) return [];
   const { models = [] } = await res.json();
   const ok = models
     .filter((m) => (m.supportedGenerationMethods || []).includes("generateContent"))
     .map((m) => m.name.replace(/^models\//, ""))
     .filter((n) => /flash/i.test(n) && !/(tts|image|live|audio|embedding|thinking|exp)/i.test(n));
-  const stable = ok.filter((n) => !/preview/i.test(n));
-  const pick = (list) => list.find((n) => !/lite/i.test(n)) || list[0];
-  return pick(stable) || pick(ok) || null;
+  const rank = (n) => (/preview/i.test(n) ? 2 : 0) + (/lite/i.test(n) ? 1 : 0);
+  flashCache = ok.sort((a, b) => rank(a) - rank(b));
+  return flashCache;
 }
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const BUSY = new Set([500, 503, 504]);
 
 async function callGemini(model, key, mime, image, signal) {
   return fetch(`${API}/models/${encodeURIComponent(model)}:generateContent`, {
@@ -84,14 +89,28 @@ export default async (req) => {
   try {
     let res = await callGemini(model, key, mime, image, ctl.signal);
 
-    // Model tidak dikenal: cari model Flash yang tersedia lalu coba sekali lagi.
+    // Model tidak dikenal: pakai model Flash pertama yang tersedia.
     if (res.status === 404) {
-      const found = await findFlashModel(key);
-      if (found && found !== model) {
-        model = autoModel = found;
+      const list = await listFlashModels(key);
+      if (list[0] && list[0] !== model) {
+        model = autoModel = list[0];
         res = await callGemini(model, key, mime, image, ctl.signal);
       }
     }
+
+    // Server Gemini lagi penuh: tunggu sebentar, coba lagi, lalu pindah ke model Flash lain.
+    if (BUSY.has(res.status)) {
+      await sleep(1500);
+      res = await callGemini(model, key, mime, image, ctl.signal);
+    }
+    if (BUSY.has(res.status)) {
+      const others = (await listFlashModels(key)).filter((n) => n !== model).slice(0, 3);
+      for (const alt of others) {
+        res = await callGemini(alt, key, mime, image, ctl.signal);
+        if (!BUSY.has(res.status) && res.status !== 404) { model = alt; break; }
+      }
+    }
+    if (BUSY.has(res.status)) return reply(503, { code: "busy" });
 
     if (res.status === 429) return reply(429, { code: "quota" });
     if (!res.ok) {
