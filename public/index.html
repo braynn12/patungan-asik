@@ -347,7 +347,7 @@ const isShared=it=>!it.scan&&(it.shared||it.who.length!==1);
 /* ---------- scan struk ---------- */
 let scanOK=true,scan={busy:false,msg:'',err:false,ctl:null};
 const SCAN_URL='/api/scan-struk';
-const SCAN_ERR={no_key:'API key Gemini belum dipasang di Netlify (GEMINI_API_KEY).',quota:'Jatah gratis Gemini lagi penuh. Coba lagi beberapa menit lagi.',too_large:'Fotonya kebesaran. Coba foto ulang.',bad_type:'Format foto nggak didukung. Pakai JPG atau PNG.',timeout:'Gemini kelamaan jawab. Coba lagi.',gemini:'Gemini lagi error. Coba lagi sebentar.',network:'Nggak bisa nyambung ke server. Cek internet, dan pastikan app dibuka dari link Netlify, bukan file lokal.'};
+const SCAN_ERR={no_key:'API key Gemini belum dipasang di Netlify (GEMINI_API_KEY).',quota:'Jatah gratis Gemini lagi penuh. Coba lagi beberapa menit lagi.',too_large:'Fotonya kebesaran. Coba foto ulang.',bad_type:'Format foto nggak didukung. Pakai JPG atau PNG.',timeout:'Gemini kelamaan jawab. Coba lagi.',gemini:'Gemini lagi error. Coba lagi sebentar.',bad_key:'API key Gemini ditolak. Cek lagi GEMINI_API_KEY di Netlify, lalu deploy ulang.',network:'Nggak bisa nyambung ke server. Cek internet, dan pastikan app dibuka dari link Netlify, bukan file lokal.'};
 async function shrink(file){
   try{const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
     const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));const c=document.createElement('canvas');
@@ -366,7 +366,7 @@ async function runScan(file){
     try{res=await fetch(SCAN_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl.slice(comma+1),mime}),signal:scan.ctl.signal})}
     catch(err){throw err&&err.name==='AbortError'?{code:'cancelled'}:{code:'network'}}
     const r=await res.json().catch(()=>null);
-    if(!res.ok)throw {code:(r&&r.code)||'gemini'};
+    if(!res.ok)throw {code:(r&&r.code)||'gemini',detail:r&&r.detail?`${r.status?r.status+' · ':''}${r.detail}`:''};
     if(!D)return;
     if(!r||r.error||!Array.isArray(r.items))throw {code:'unreadable'};
     const items=r.items.filter(x=>x&&x.name&&(+x.unit_price>0)).map(x=>({id:uid(),name:String(x.name).slice(0,60),price:Math.round(+x.unit_price),qty:Math.max(1,Math.round(+x.qty||1)),who:[],scan:true}));
@@ -389,7 +389,7 @@ async function runScan(file){
   }catch(e){
     if(!D)return;
     if(e&&(e.code==='cancelled'||e.name==='AbortError')){scan={busy:false,msg:'',err:false,ctl:null}}
-    else{const m=e&&e.code==='unreadable'?'Struknya nggak kebaca. Coba foto ulang: struk lurus, terang, dan semua harga kelihatan.':(SCAN_ERR[e&&e.code]||'Gagal baca struk. Coba lagi.');
+    else{const m=e&&e.code==='unreadable'?'Struknya nggak kebaca. Coba foto ulang: struk lurus, terang, dan semua harga kelihatan.':(SCAN_ERR[e&&e.code]||'Gagal baca struk. Coba lagi.')+(e&&e.detail?' (Detail: '+e.detail+')':'');
       scan={busy:false,msg:m,err:true,ctl:null};}
   }
   renderEditor(false);

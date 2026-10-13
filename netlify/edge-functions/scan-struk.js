@@ -29,12 +29,48 @@ function parseJson(text) {
   return null;
 }
 
+const API = "https://generativelanguage.googleapis.com/v1beta";
+let autoModel = null; // model hasil pencarian otomatis, disimpan selama function hidup
+
+// Cari model Flash yang tersedia untuk API key ini, kalau model yang diminta tidak ada.
+async function findFlashModel(key) {
+  const res = await fetch(`${API}/models?pageSize=200`, { headers: { "x-goog-api-key": key } });
+  if (!res.ok) return null;
+  const { models = [] } = await res.json();
+  const ok = models
+    .filter((m) => (m.supportedGenerationMethods || []).includes("generateContent"))
+    .map((m) => m.name.replace(/^models\//, ""))
+    .filter((n) => /flash/i.test(n) && !/(tts|image|live|audio|embedding|thinking|exp)/i.test(n));
+  const stable = ok.filter((n) => !/preview/i.test(n));
+  const pick = (list) => list.find((n) => !/lite/i.test(n)) || list[0];
+  return pick(stable) || pick(ok) || null;
+}
+
+async function callGemini(model, key, mime, image, signal) {
+  return fetch(`${API}/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: PROMPT }, { inline_data: { mime_type: mime, data: image } }] }],
+      generationConfig: { temperature: 0, responseMimeType: "application/json" },
+    }),
+    signal,
+  });
+}
+
+async function geminiError(res) {
+  const raw = await res.text();
+  let msg = raw;
+  try { msg = JSON.parse(raw)?.error?.message || raw; } catch {}
+  return String(msg).slice(0, 300);
+}
+
 export default async (req) => {
   if (req.method !== "POST") return reply(405, { code: "method" });
 
-  const key = Netlify.env.get("GEMINI_API_KEY");
+  const key = (Netlify.env.get("GEMINI_API_KEY") || "").trim();
   if (!key) return reply(500, { code: "no_key" });
-  const model = Netlify.env.get("GEMINI_MODEL") || "gemini-flash-latest";
+  let model = (Netlify.env.get("GEMINI_MODEL") || "").trim() || autoModel || "gemini-flash-latest";
 
   let body;
   try { body = await req.json(); } catch { return reply(400, { code: "bad_request" }); }
@@ -44,24 +80,25 @@ export default async (req) => {
   if (image.length > MAX_B64) return reply(413, { code: "too_large" });
 
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 35_000);
+  const timer = setTimeout(() => ctl.abort(), 38_000);
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: PROMPT }, { inline_data: { mime_type: mime, data: image } }] }],
-          generationConfig: { temperature: 0, responseMimeType: "application/json" },
-        }),
-        signal: ctl.signal,
-      },
-    );
+    let res = await callGemini(model, key, mime, image, ctl.signal);
+
+    // Model tidak dikenal: cari model Flash yang tersedia lalu coba sekali lagi.
+    if (res.status === 404) {
+      const found = await findFlashModel(key);
+      if (found && found !== model) {
+        model = autoModel = found;
+        res = await callGemini(model, key, mime, image, ctl.signal);
+      }
+    }
+
     if (res.status === 429) return reply(429, { code: "quota" });
     if (!res.ok) {
-      console.error("Gemini error", res.status, (await res.text()).slice(0, 500));
-      return reply(502, { code: "gemini" });
+      const detail = await geminiError(res);
+      console.error("Gemini error", res.status, model, detail);
+      const code = /api key/i.test(detail) || res.status === 401 || res.status === 403 ? "bad_key" : "gemini";
+      return reply(502, { code, status: res.status, model, detail });
     }
     const data = await res.json();
     const text = (data?.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
@@ -71,7 +108,7 @@ export default async (req) => {
   } catch (e) {
     if (e?.name === "AbortError") return reply(504, { code: "timeout" });
     console.error(e);
-    return reply(502, { code: "gemini" });
+    return reply(502, { code: "gemini", detail: String(e?.message || e).slice(0, 300) });
   } finally {
     clearTimeout(timer);
   }
