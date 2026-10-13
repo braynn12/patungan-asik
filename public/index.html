@@ -159,6 +159,38 @@ td:first-child{white-space:normal;font-family:var(--f-body);font-weight:600}
 @media (max-width:420px){.item-top{grid-template-columns:1fr 92px 46px 30px}}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 body{margin:0}
+.sync{position:relative}
+.pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border-radius:999px;padding:4px 11px;font-size:.78rem;font-weight:600}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--mark)}
+.pill.on::before{background:#34D399}.pill.off::before{background:#FCA5A5}
+.share{border:1px solid #C9D8F8;background:var(--accent-soft);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.share b{font-family:var(--f-display);color:var(--accent-dark);font-size:1.02rem}
+.linkbox{font-family:var(--f-mono);font-size:.8rem;background:var(--paper);border:1px dashed #9FB7EE;border-radius:10px;padding:8px 10px;overflow-wrap:anywhere;user-select:all}
+.progress{height:10px;background:var(--soft);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--good);border-radius:99px;transition:width .3s}
+.grp{display:flex;flex-direction:column;gap:8px}
+.grp-t{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.pay{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.pay.done{background:var(--good-soft);border-color:#B5E6D2}
+.pay-top{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.pay-who{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-weight:600;min-width:0}
+.pay-who i{font-style:normal;color:var(--muted);padding:0 2px}
+.pay-amt{font-weight:600}
+.tgl{width:48px;height:28px;border-radius:99px;border:0;background:#CBD5E1;position:relative;padding:0;flex:none}
+.tgl span{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.tgl.on{background:var(--good)}.tgl.on span{left:23px}
+.upl{display:flex;flex-direction:column;gap:8px;background:var(--soft);border-radius:10px;padding:10px;font-size:.88rem}
+.pay.done .upl{background:var(--paper)}
+.upl label.btn{cursor:pointer}
+.pay-meta{display:flex;align-items:center;gap:10px}
+.proof-thumb{border:1px solid #B5E6D2;border-radius:8px;padding:0;overflow:hidden;width:48px;height:48px;background:var(--paper);flex:none}
+.proof-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.warnline{color:var(--bad)}
+.lunas-chip{font-family:var(--f-body);font-size:.68rem;font-weight:700;color:#0B6E4C;background:var(--good-soft);padding:2px 8px;border-radius:99px}
+.viewer{position:fixed;inset:0;background:rgba(10,15,30,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;z-index:30}
+.viewer img{max-height:85%;max-width:100%;border-radius:10px;background:#fff}
+.viewer-x{color:#fff;font-size:.85rem;opacity:.8}
+@media (max-width:400px){.pay-top{grid-template-columns:minmax(0,1fr) auto}.pay-amt{grid-column:1;grid-row:2}.pay-top .tgl{grid-column:2;grid-row:1/3}}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 img{max-width:100%}
 [hidden]{display:none!important}
@@ -168,7 +200,11 @@ img{max-width:100%}
 
 <div class="wrap" id="app"></div>
 <div id="editor"></div>
+<div id="viewer" class="viewer" hidden><img id="viewer-img" alt="Bukti transfer"><span class="viewer-x">Tap di mana aja buat tutup</span></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script>
 const KEY='patungan-asik-v1';
 const CATS=[['makan','Makan'],['gofood','GoFood'],['ojol','Gojek/Grab'],['tol','Tol'],['bensin','Bensin'],['parkir','Parkir'],['main','Main'],['belanja','Belanja'],['lain','Lainnya']];
@@ -201,12 +237,78 @@ function sample(){
     {...base,id:uid(),name:'Gojek pulang',cat:'ojol',payer:s.id,mode:'rata',amount:38000,participants:[d.id,s.id]}
   ]};
 }
-function blank(){return {sample:false,title:'',people:[],expenses:[]}}
+function blank(){return {sample:false,title:'',people:[],expenses:[],payments:{}}}
 
-let S;
-try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!S||!Array.isArray(S.people))S=sample();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} render()}
+/* ---------- penyimpanan: lokal atau sesi bareng (Firestore) ---------- */
+const okId=x=>typeof x==='string'&&/^[a-z0-9]{1,20}$/.test(x);
+const num=x=>{const v=Number(x);return isFinite(v)?v:0};
+function cleanState(st){
+  if(!st||!Array.isArray(st.people)||!Array.isArray(st.expenses))return null;
+  const out={sample:!!st.sample,title:String(st.title||'').slice(0,80),payments:st.payments&&typeof st.payments==='object'?st.payments:{}};
+  out.people=st.people.filter(p=>p&&okId(p.id)).map(p=>({id:p.id,name:String(p.name||'?').slice(0,40)}));
+  out.expenses=st.expenses.filter(e=>e&&okId(e.id)&&okId(e.payer)).map(e=>({
+    id:e.id,name:String(e.name||'').slice(0,60),cat:CAT[e.cat]?e.cat:'lain',payer:e.payer,mode:e.mode==='item'?'item':'rata',
+    amount:num(e.amount),participants:(e.participants||[]).filter(okId),
+    items:(e.items||[]).filter(i=>i&&okId(i.id)).map(i=>({id:i.id,name:String(i.name||'').slice(0,60),price:num(i.price),qty:num(i.qty),who:(i.who||[]).filter(okId),shared:!!i.shared,scan:!!i.scan})),
+    disc:{type:e.disc&&e.disc.type==='nom'?'nom':'pct',value:num(e.disc&&e.disc.value),max:num(e.disc&&e.disc.max)},
+    svc:num(e.svc),tax:num(e.tax),fee:num(e.fee),receiptTotal:num(e.receiptTotal)}));
+  return out;
+}
+function loadLocal(){let s=null;try{s=cleanState(JSON.parse(localStorage.getItem(KEY)))}catch(e){}return s||cleanState(sample())}
+
+const ROOM_RE=/^#([a-z0-9]{6,12})$/;
+let ROOM=null,fdb=null,roomRef=null,unsubs=[],PAY={},syncState='',roomErr='',shareBusy=false,titleTimer=null;
+try{const c=window.FIREBASE_CONFIG;if(window.firebase&&c&&c.projectId&&!/^ISI_/.test(c.projectId)){firebase.initializeApp(c);fdb=firebase.firestore()}}catch(e){console.error(e);fdb=null}
+let S=loadLocal();
+const stamp=()=>firebase.firestore.FieldValue.serverTimestamp();
+function persist(){
+  if(ROOM&&roomRef){const {payments,...rest}=S;
+    roomRef.set({state:JSON.stringify(rest),updatedAt:stamp()},{merge:true}).catch(err=>{console.error(err);syncState='err';roomErr='Gagal nyimpen ke server. Cek internet.';render()})}
+  else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+}
+function save(){persist();render()}
+function leaveRoom(msg){
+  unsubs.forEach(f=>f());unsubs=[];ROOM=null;roomRef=null;PAY={};syncState='';roomErr=msg||'';S=loadLocal();
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(_){}
+  render();
+}
+function joinRoom(code){
+  if(!fdb){roomErr='Fitur patungan bareng belum aktif (Firebase belum diatur).';render();return}
+  unsubs.forEach(f=>f());unsubs=[];
+  ROOM=code;roomRef=fdb.collection('patungan').doc(code);syncState='wait';PAY={};roomErr='';render();
+  let first=true;
+  unsubs.push(roomRef.onSnapshot(snap=>{
+    if(!snap.exists){if(first)leaveRoom('Link patungan itu nggak ketemu. Cek lagi link-nya.');return}
+    first=false;
+    let st=null;try{st=cleanState(JSON.parse(snap.data().state))}catch(_){}
+    if(!st)return;
+    const keepTitle=titleTimer?S.title:null;
+    S={...st,payments:{}};if(keepTitle!=null)S.title=keepTitle;
+    syncState='ok';roomErr='';render();
+  },err=>{console.error(err);syncState='err';roomErr='Nggak bisa nyambung ke sesi bareng. Cek internet atau aturan Firestore.';render()}));
+  unsubs.push(roomRef.collection('payments').onSnapshot(qs=>{PAY={};qs.forEach(d=>PAY[d.id]=d.data());render()},err=>console.error(err)));
+}
+async function startRoom(){
+  if(!fdb||shareBusy)return;shareBusy=true;roomErr='';render();
+  const abc='abcdefghjkmnpqrstuvwxyz23456789';
+  const code=Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>abc[b%abc.length]).join('');
+  try{
+    const ref=fdb.collection('patungan').doc(code);
+    const {payments,...rest}=S;rest.sample=false;
+    await ref.set({state:JSON.stringify(rest),createdAt:stamp(),updatedAt:stamp()});
+    const pays=payments||{};
+    for(const k in pays){if(pays[k]&&pays[k].paid&&pays[k].proof)await ref.collection('payments').doc(k).set(pays[k])}
+    shareBusy=false;location.hash=code;
+  }catch(e){console.error(e);shareBusy=false;roomErr='Gagal bikin link bareng. Cek internet atau aturan Firestore.';render()}
+}
+async function setPayment(k,obj){
+  if(ROOM&&roomRef){const ref=roomRef.collection('payments').doc(k);if(obj)await ref.set(obj);else await ref.delete()}
+  else{S.payments=S.payments||{};if(obj)S.payments[k]=obj;else delete S.payments[k];persist();render()}
+}
+window.addEventListener('hashchange',()=>{const m=location.hash.match(ROOM_RE);if(m&&m[1]!==ROOM)joinRoom(m[1]);else if(!m&&ROOM)leaveRoom()});
+const roomLink=()=>location.origin+location.pathname+'#'+ROOM;
+const safeImg=x=>typeof x==='string'&&x.length<600000&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(x)?x:'';
+const fmtTime=t=>{try{return new Date(t).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(_){return ''}};
 const pName=id=>(S.people.find(p=>p.id===id)||{}).name||'?';
 const PCOL=['#2563EB','#F97316','#10B981','#E11D48','#8B5CF6','#0EA5E9','#D97706','#14B8A6','#DB2777','#4F46E5'];
 const pCol=id=>PCOL[Math.max(0,S.people.findIndex(p=>p.id===id))%PCOL.length];
@@ -250,17 +352,55 @@ function summary(){
 }
 
 /* ---------- tampilan utama ---------- */
-let personMsg='',confirmReset=false,copied=false;
+let personMsg='',confirmReset=false,copied=false,linkCopied=false,payUI={open:null,busy:null,undo:null,msg:''};
+function payInfo(t){const k=t.from+'_'+t.to;const p=(ROOM?PAY:(S.payments||{}))[k];
+  const paid=!!(p&&p.paid&&p.amount===t.v);const changed=!!(p&&p.paid&&p.amount!==t.v);return {k,p,paid,changed}}
+function shareBlock(){
+  if(!fdb)return '';
+  if(!ROOM)return `<div class="share">
+    <div><b>Ajak teman ngedit bareng</b><div class="hint">Bikin link patungan. Semua yang buka link bisa nambah pengeluaran, nandain udah bayar, dan upload bukti transfer.</div></div>
+    <div class="actions"><button class="btn primary" data-act="share-start" ${shareBusy?'disabled':''}>${shareBusy?'Lagi bikin link…':'Bikin link bareng'}</button></div>
+    ${roomErr?`<div class="warn">${esc(roomErr)}</div>`:''}</div>`;
+  return `<div class="share">
+    <div><b>Patungan bareng</b><div class="hint">Kirim link ini ke grup. Perubahan dari siapa pun langsung muncul di HP semua orang.</div></div>
+    <div class="linkbox" id="roomlink">${esc(roomLink())}</div>
+    <div class="actions"><button class="btn primary" data-act="share-copy">${linkCopied?'Link tersalin ✓':'Salin link'}</button><button class="btn ghost" data-act="share-leave">Keluar dari sesi</button></div>
+    ${roomErr?`<div class="warn">${esc(roomErr)}</div>`:''}</div>`;
+}
+function payRow(x){
+  const pf=x.p&&safeImg(x.p.proof);
+  const top=`<div class="pay-top"><div class="pay-who">${dn(x.from)}<i>→</i>${dn(x.to)}</div><div class="pay-amt num">${rp(x.v)}</div>
+    <button class="tgl${x.paid?' on':''}" role="switch" aria-checked="${x.paid}" aria-label="${x.paid?'Sudah bayar':'Tandai sudah bayar'}: ${esc(pName(x.from))}" data-act="${x.paid?'pay-undo':'pay-open'}" data-k="${x.k}"><span></span></button></div>`;
+  if(x.paid)return `<div class="pay done">${top}
+    <div class="pay-meta">${pf?`<button class="proof-thumb" data-act="view-proof" data-k="${x.k}" aria-label="Lihat bukti transfer"><img src="${pf}" alt=""></button>`:''}<span class="hint">Lunas${x.p.at?' · '+esc(fmtTime(x.p.at)):''}${pf?' · tap foto buat lihat bukti':''}</span></div>
+    ${payUI.undo===x.k?`<div class="upl"><span>Batalkan status lunas ${esc(pName(x.from))}?</span><div class="actions"><button class="btn danger sm" data-act="pay-undo-yes" data-k="${x.k}">Ya, batalkan</button><button class="btn ghost sm" data-act="pay-undo-no">Nggak jadi</button></div></div>`:''}</div>`;
+  const open=payUI.open===x.k;
+  return `<div class="pay">${top}
+    ${x.changed?`<div class="hint warnline">Sebelumnya ditandai lunas ${rp(x.p.amount)}, tapi nominalnya berubah. Upload bukti lagi kalau udah bayar yang baru.</div>`:''}
+    ${open?`<div class="upl">${payUI.busy===x.k?`<div class="scan-busy"><span class="spin" aria-hidden="true"></span><span>Lagi upload bukti…</span></div>`
+      :`<span>Upload bukti transfer dulu biar ${esc(pName(x.from))} ketanda lunas.</span>
+      <div class="actions"><label class="btn primary sm" for="proof-${x.k}">Pilih foto bukti</label><button class="btn ghost sm" data-act="pay-close">Batal</button></div>
+      <input type="file" id="proof-${x.k}" class="proof-in" data-k="${x.k}" accept="image/*" hidden>`}
+      ${payUI.msg?`<div class="warn">${esc(payUI.msg)}</div>`:''}</div>`:''}</div>`;
+}
 function render(){
+  const ae=document.activeElement,appEl=document.getElementById('app');
+  const fid=ae&&ae.id&&appEl.contains(ae)&&ae.tagName==='INPUT'?ae.id:null;
+  let sel=null;try{if(fid)sel=[ae.selectionStart,ae.selectionEnd]}catch(_){}
   const {pp,grand,tf}=summary();
-  const app=document.getElementById('app');
-  app.innerHTML=`
+  const pays=tf.map(t=>({...t,...payInfo(t)}));
+  const unpaid=pays.filter(x=>!x.paid),paidL=pays.filter(x=>x.paid);
+  const pct=pays.length?Math.round(paidL.length/pays.length*100):0;
+  const sisa=unpaid.reduce((a,x)=>a+x.v,0);
+  appEl.innerHTML=`
   <header>
     <div class="brand"><span>Patungan</span> Asik</div>
     <input class="trip" id="trip" placeholder="Nama acara, misal: Main ke Puncak · Minggu" value="${esc(S.title)}">
     <div class="stats"><div class="stat"><small>Total</small><b class="num">${rp(grand)}</b></div><div class="stat"><small>Orang</small><b>${S.people.length}</b></div><div class="stat"><small>Catatan</small><b>${S.expenses.length}</b></div></div>
+    ${ROOM?`<div class="sync"><span class="pill ${syncState==='ok'?'on':syncState==='err'?'off':''}">${syncState==='ok'?'Online bareng':syncState==='err'?'Offline':'Menyambung…'} · kode ${esc(ROOM)}</span></div>`:''}
   </header>
-  ${S.sample?`<div class="banner"><span>Ini data contoh biar kelihatan cara kerjanya.</span><button class="btn sm" data-act="clear-sample">Kosongkan &amp; mulai</button></div>`:''}
+  ${S.sample&&!ROOM?`<div class="banner"><span>Ini data contoh biar kelihatan cara kerjanya.</span><button class="btn sm" data-act="clear-sample">Kosongkan &amp; mulai</button></div>`:''}
+  ${shareBlock()}
 
   <section class="sec">
     <div class="sec-head"><h2>Siapa aja yang ikut</h2></div>
@@ -289,26 +429,52 @@ function render(){
       <div class="hint" style="font-family:var(--f-body)">Saldo plus = nanti nerima, minus = harus transfer.</div>
       <div class="dash"></div>
       <div class="eyebrow" style="font-family:var(--f-body)">Siapa transfer ke siapa</div>
-      <div class="tf">${tf.length?tf.map(t=>`<div class="tf-row"><span class="who dotname">${dn(t.from)}<i>→</i>${dn(t.to)}</span><span class="amt">${rp(t.v)}</span></div>`).join(''):`<div class="lunas">Semua udah impas.</div>`}</div>
+      <div class="tf">${pays.length?pays.map(t=>`<div class="tf-row"><span class="who dotname">${dn(t.from)}<i>→</i>${dn(t.to)}</span><span class="dotname">${t.paid?'<span class="lunas-chip">Lunas</span>':''}<span class="amt">${rp(t.v)}</span></span></div>`).join(''):`<div class="lunas">Semua udah impas.</div>`}</div>
       <div class="dash"></div>
       <div class="actions" style="font-family:var(--f-body)">
         <button class="btn primary" data-act="copy">${copied?'Tersalin ✓':'Salin buat WhatsApp'}</button>
-        ${confirmReset?`<button class="btn danger" data-act="reset-yes">Ya, hapus semua</button><button class="btn ghost" data-act="reset-no">Batal</button>`:`<button class="btn ghost" data-act="reset">Mulai sesi baru</button>`}
+        ${confirmReset?`<button class="btn danger" data-act="reset-yes">${ROOM?'Ya, keluar & mulai baru':'Ya, hapus semua'}</button><button class="btn ghost" data-act="reset-no">Batal</button>`:`<button class="btn ghost" data-act="reset">Mulai sesi baru</button>`}
       </div>
       <textarea id="copybox" hidden readonly style="width:100%;height:160px;font-family:var(--f-mono);font-size:.8rem"></textarea>
     </div>
+  </section>
+
+  <section class="sec" id="status">
+    <div class="sec-head"><h2>Status bayar</h2>${pays.length?`<span class="hint num">${paidL.length}/${pays.length} lunas</span>`:''}</div>
+    ${pays.length?`
+      <div class="progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progres pembayaran"><span style="width:${pct}%"></span></div>
+      ${unpaid.length?`<div class="grp"><div class="grp-t">Belum bayar · sisa <span class="num">${rp(sisa)}</span></div>${unpaid.map(payRow).join('')}</div>`:`<div class="lunas">Semua udah lunas. Mantap!</div>`}
+      ${paidL.length?`<div class="grp"><div class="grp-t">Sudah bayar</div>${paidL.map(payRow).join('')}</div>`:''}
+      <div class="hint">Geser tombol di kanan kalau udah transfer, lalu upload foto bukti transfernya.</div>`
+    :`<div class="empty">Belum ada yang perlu transfer.</div>`}
   </section>`;
+  if(fid){const el=document.getElementById(fid);if(el){el.focus({preventScroll:true});if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(_){}}}
 }
 function waText(){
   const {pp,grand,tf}=summary();
   let t=`*Patungan Asik${S.title?' — '+S.title:''}*\nTotal: ${rp(grand)}\n\n*Rincian:*\n`;
   S.expenses.forEach(e=>{t+=`• ${e.name} (${pName(e.payer)}): ${rp(calc(e).total)}\n`});
   t+=`\n*Bagian tiap orang:*\n`;S.people.forEach(p=>t+=`• ${p.name}: ${rp(pp[p.id].owe)}\n`);
-  t+=`\n*Transfer:*\n`+(tf.length?tf.map(x=>`• ${pName(x.from)} → ${pName(x.to)}: ${rp(x.v)}`).join('\n'):'Semua udah impas');
+  t+=`\n*Transfer:*\n`+(tf.length?tf.map(x=>`${payInfo(x).paid?'✅':'⏳'} ${pName(x.from)} → ${pName(x.to)}: ${rp(x.v)}`).join('\n'):'Semua udah impas');
+  if(ROOM)t+=`\n\nUpdate & upload bukti bayar di sini:\n${roomLink()}`;
   return t;
 }
-document.getElementById('app').addEventListener('input',e=>{if(e.target.id==='trip'){S.title=e.target.value;S.sample=false;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(_){}
-  const sub=document.querySelector('.struk .sub');if(sub)sub.textContent=(S.title||'Tanpa judul')+' · total '+rp(summary().grand)}});
+document.getElementById('app').addEventListener('input',e=>{if(e.target.id==='trip'){S.title=e.target.value;S.sample=false;
+  const sub=document.querySelector('.struk .sub');if(sub)sub.textContent=(S.title||'Tanpa judul')+' · total '+rp(summary().grand);
+  clearTimeout(titleTimer);titleTimer=setTimeout(()=>{titleTimer=null;persist()},600)}});
+document.getElementById('app').addEventListener('change',async e=>{
+  const t=e.target;if(!t.classList||!t.classList.contains('proof-in')||!t.files||!t.files[0])return;
+  const k=t.dataset.k,file=t.files[0];
+  const tr=summary().tf.find(x=>x.from+'_'+x.to===k);if(!tr)return;
+  payUI.busy=k;payUI.msg='';render();
+  try{
+    let proof=await shrink(file,1000,0.65);
+    if(proof.length>380000)proof=await shrink(file,720,0.55);
+    if(!safeImg(proof)||proof.length>380000)throw new Error('size');
+    await setPayment(k,{paid:true,amount:tr.v,from:tr.from,to:tr.to,proof,at:Date.now()});
+    payUI={open:null,busy:null,undo:null,msg:''};render();
+  }catch(err){console.error(err);payUI.busy=null;payUI.msg=err&&err.message==='size'?'Fotonya nggak bisa dipakai. Coba screenshot bukti transfer dalam format JPG/PNG.':'Gagal upload bukti. Cek internet lalu coba lagi.';render()}
+});
 document.getElementById('app').addEventListener('submit',e=>{e.preventDefault();const i=document.getElementById('pname');const n=i.value.trim();
   if(!n)return;if(S.people.some(p=>p.name.toLowerCase()===n.toLowerCase())){personMsg=`${n} udah ada di daftar.`;render();return}
   personMsg='';S.people.push({id:uid(),name:n});save();document.getElementById('pname').focus()});
@@ -323,7 +489,19 @@ document.getElementById('app').addEventListener('click',async e=>{
   }
   if(a==='new-exp')openEditor(null);
   if(a==='edit-exp')openEditor(id);
-  if(a==='clear-sample'||a==='reset-yes'){S=blank();confirmReset=false;save()}
+  if(a==='clear-sample'){S=cleanState(blank());save()}
+  if(a==='reset-yes'){if(ROOM)leaveRoom();S=cleanState(blank());confirmReset=false;save()}
+  if(a==='share-start')startRoom();
+  if(a==='share-leave')leaveRoom();
+  if(a==='share-copy'){try{await navigator.clipboard.writeText(roomLink());linkCopied=true;render();setTimeout(()=>{linkCopied=false;render()},1800)}
+    catch(_){const el=document.getElementById('roomlink');const r=document.createRange();r.selectNodeContents(el);const s2=getSelection();s2.removeAllRanges();s2.addRange(r)}}
+  const k=b.dataset.k;
+  if(a==='pay-open'){payUI={open:k,busy:null,undo:null,msg:''};render()}
+  if(a==='pay-close'){payUI={open:null,busy:null,undo:null,msg:''};render()}
+  if(a==='pay-undo'){payUI={open:null,busy:null,undo:k,msg:''};render()}
+  if(a==='pay-undo-no'){payUI.undo=null;render()}
+  if(a==='pay-undo-yes'){payUI.undo=null;try{await setPayment(k,null)}catch(err){console.error(err)}render()}
+  if(a==='view-proof'){const p=(ROOM?PAY:(S.payments||{}))[k];const src=p&&safeImg(p.proof);if(src){document.getElementById('viewer-img').src=src;document.getElementById('viewer').hidden=false}}
   if(a==='reset'){confirmReset=true;render()}
   if(a==='reset-no'){confirmReset=false;render()}
   if(a==='copy'){const t=waText();
@@ -348,11 +526,11 @@ const isShared=it=>!it.scan&&(it.shared||it.who.length!==1);
 let scanOK=true,scan={busy:false,msg:'',err:false,ctl:null};
 const SCAN_URL='/api/scan-struk';
 const SCAN_ERR={no_key:'API key belum dipasang di Netlify (GROQ_API_KEY atau GEMINI_API_KEY).',quota:'Jatah gratis AI lagi penuh. Coba lagi beberapa menit lagi.',too_large:'Fotonya kebesaran. Coba foto ulang.',bad_type:'Format foto nggak didukung. Pakai JPG atau PNG.',timeout:'AI-nya kelamaan jawab. Coba lagi.',gemini:'Gemini lagi error. Coba lagi sebentar.',groq:'Groq lagi error. Coba lagi sebentar.',busy:'Server AI lagi penuh banget. Tunggu 1–2 menit lalu coba foto lagi.',bad_key:'API key ditolak. Cek lagi GROQ_API_KEY / GEMINI_API_KEY di Netlify, lalu deploy ulang.',network:'Nggak bisa nyambung ke server. Cek internet, dan pastikan app dibuka dari link Netlify, bukan file lokal.'};
-async function shrink(file){
+async function shrink(file,max=1600,q=0.85){
   try{const bmp=await createImageBitmap(file,{imageOrientation:'from-image'});
-    const k=Math.min(1,1600/Math.max(bmp.width,bmp.height));const c=document.createElement('canvas');
+    const k=Math.min(1,max/Math.max(bmp.width,bmp.height));const c=document.createElement('canvas');
     c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
-    return c.toDataURL('image/jpeg',0.85)}
+    return c.toDataURL('image/jpeg',q)}
   catch(_){return await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(file)})}
 }
 const r2=n=>Math.round(n*100)/100;
@@ -533,6 +711,8 @@ ed.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&D)closeEditor()});
 render();
+document.getElementById('viewer').addEventListener('click',()=>{document.getElementById('viewer').hidden=true});
+{const m0=location.hash.match(ROOM_RE);if(m0)joinRoom(m0[1])}
 </script>
 </body>
 </html>
