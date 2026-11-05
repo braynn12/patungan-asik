@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#2563EB">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Patungan">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <title>Patungan Asik</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -216,8 +224,92 @@ img{max-width:100%}
 .slip .progress{height:8px;background:var(--paper)}
 .badge{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;background:var(--paper);color:var(--muted);border:1px solid var(--line);flex:none}
 .badge.ok{background:var(--good-soft);color:#0B6E4C;border-color:#B5E6D2}
-.back{align-self:flex-start;color:var(--accent-dark);font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;gap:6px;margin:-10px 0 -12px}
-.back:hover{text-decoration:underline}
+/* ---------- iPhone: target sentuh, zoom input, header acara ---------- */
+input,select,textarea{font-size:16px} /* di bawah 16px Safari iOS nge-zoom saat input disentuh */
+.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;-webkit-tap-highlight-color:transparent;transition:background-color .15s,transform .1s}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{min-height:44px}
+.pick button{min-height:44px;-webkit-tap-highlight-color:transparent}
+.chip button{position:relative}.chip button::after{content:"";position:absolute;inset:-10px}
+.tgl{position:relative}.tgl::after{content:"";position:absolute;inset:-8px -4px}
+.item-top{grid-template-columns:1fr 104px 52px 44px}
+@media (max-width:420px){.item-top{grid-template-columns:1fr 88px 48px 44px}}
+.item-top .in{min-height:44px}
+.trip-h{gap:12px;padding:12px 16px 16px}
+.trip-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative}
+.back{color:#fff;font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;gap:4px;margin-left:-6px;padding:0 8px;border-radius:10px}
+.back:hover{background:rgba(255,255,255,.12)}
+.trip-h .trip{font-family:var(--f-display);font-size:1.45rem;font-weight:800;letter-spacing:-.02em;padding:4px 0 8px}
+.big-add{min-height:52px;font-size:1rem}
+/* ---------- tab bar acara: tepi atas bergerigi seperti struk yang disobek ---------- */
+body.tabs-on{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--paper);padding:6px 12px calc(6px + env(safe-area-inset-bottom,0px));filter:drop-shadow(0 -1px 0 var(--line))}
+.tabbar::before{content:"";position:absolute;left:0;right:0;top:-7px;height:8px;background:var(--paper);
+  -webkit-mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) 50%/14px 100%;mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) 50%/14px 100%}
+.tabs{display:flex;max-width:520px;margin:0 auto;touch-action:none;-webkit-user-select:none;user-select:none}
+.tabs button{flex:1;min-width:0;min-height:56px;border:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:700;font-size:.8rem;position:relative;-webkit-tap-highlight-color:transparent;border-radius:12px}
+.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tabs span{padding:0 4px;transition:background-size .2s;background:linear-gradient(transparent 58%,var(--mark) 58%) no-repeat 0 0/0% 100%}
+.tabs button[aria-selected="true"],.tabs.drag button.hot{color:var(--accent-dark)}
+.tabs button[aria-selected="true"] span,.tabs.drag button.hot span{background-size:100% 100%}
+.tabs.drag button[aria-selected="true"]:not(.hot){color:var(--muted)}
+.tabs.drag button[aria-selected="true"]:not(.hot) span{background-size:0% 100%}
+.tb-badge{position:absolute;top:4px;left:calc(50% + 8px);min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--accent);color:#fff;font-style:normal;font-size:.72rem;font-weight:700;display:grid;place-items:center}
+.pane{display:flex;flex-direction:column;gap:22px}
+.pane.enter>*{animation:paneIn .28s ease-out both}
+@keyframes paneIn{from{opacity:0;transform:translateY(8px)}}
+/* ---------- toast & tips pasang di iPhone ---------- */
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:40;width:max-content;max-width:calc(100% - 32px);text-align:center}
+.toast.show{animation:toastIn .3s ease-out}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}}
+.tip{background:var(--accent-soft);color:var(--ink);border:1px solid #C9D8F8;flex-wrap:nowrap;align-items:flex-start}
+.tip svg{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:var(--accent-dark);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* ---------- sheet editor: pegangan untuk geser turun ---------- */
+.sheet{overscroll-behavior:contain}
+.grab{width:44px;height:5px;border-radius:99px;background:var(--line);margin:-8px auto -4px;flex:none}
+.sheet-top{touch-action:none}
+/* ---------- animasi bagi struk ----------
+   Satu struk muncul, totalnya pecah jadi 4 bagian kecil yang meluncur ke 4 avatar, lalu total muncul lagi.
+   Siklus 2,4 detik; keadaan akhir sama dengan awal supaya ulangannya mulus. Hanya transform & opacity. */
+.splash{position:fixed;inset:0;z-index:50;background:var(--accent);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:16px;text-align:center;transition:opacity .35s,visibility .35s}
+.splash.out{opacity:0;visibility:hidden}
+.splash-word{font-family:var(--f-display);font-weight:800;font-size:2rem;letter-spacing:-.03em;line-height:1}
+.splash-word span{color:var(--mark)}
+.splash-msg{font-weight:600;font-size:.9rem;min-height:1.4em}
+.splash .btn{color:var(--ink)}
+.split-anim{position:relative;width:220px;height:200px;flex:none}
+.sa-paper{position:absolute;left:62px;top:36px;filter:drop-shadow(0 2px 3px rgba(20,33,61,.25));animation:saIn .5s ease-out both}
+.sa-struk{width:96px;height:118px;background:#fff;padding:14px 12px 20px;display:flex;flex-direction:column;align-items:center;gap:7px;
+  -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/12px 100%;mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/12px 100%}
+.sa-l{display:block;width:100%;height:5px;border-radius:3px;background:#DCE4F1}
+.sa-l.s{width:60%}
+.sa-amt{font-family:var(--f-mono);font-weight:600;font-size:15px;color:var(--ink);background:linear-gradient(transparent 55%,var(--mark) 55%);padding:0 2px;margin:4px 0;animation:saAmt 2.4s ease-in-out .5s infinite}
+.sa-av{position:absolute;width:40px;height:40px;border-radius:50%;background:var(--c);border:3px solid #fff;animation:saAv 2.4s ease-out infinite;animation-delay:var(--d)}
+.sa-av::after{content:"";position:absolute;left:50%;top:7px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 13px 0 4px rgba(255,255,255,.9);clip-path:inset(-4px -9px -7px -9px)}
+.a1{left:8px;top:8px;--c:#F97316}.a2{right:8px;top:8px;--c:#10B981}.a3{left:8px;bottom:8px;--c:#E11D48}.a4{right:8px;bottom:8px;--c:#8B5CF6}
+.sa-c{position:absolute;left:90px;top:84px;width:40px;height:22px;border-radius:7px;background:var(--mark);color:var(--ink);font-family:var(--f-mono);font-weight:600;font-size:11px;display:grid;place-items:center;opacity:0;animation:saChip 2.4s infinite;animation-delay:var(--d)}
+.c1{--dx:-82px;--dy:-64px}.c2{--dx:82px;--dy:-64px}.c3{--dx:-82px;--dy:80px}.c4{--dx:82px;--dy:80px}
+.c1,.a1{--d:.5s}.c2,.a2{--d:.56s}.c3,.a3{--d:.62s}.c4,.a4{--d:.68s}
+@keyframes saIn{from{opacity:0;transform:translateY(14px) scale(.96)}}
+@keyframes saAmt{0%{opacity:0;transform:scale(.9)}10%,36%{opacity:1;transform:none}44%,100%{opacity:0;transform:scale(.7)}}
+@keyframes saChip{0%,36%{opacity:0;transform:translate(0,0) scale(.6)}
+  43%{opacity:1;transform:translate(0,0) scale(1);animation-timing-function:cubic-bezier(.45,0,.25,1)}
+  70%{opacity:1;transform:translate(var(--dx),var(--dy)) scale(.85)}78%,100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.4)}}
+@keyframes saAv{0%,68%{transform:scale(1)}76%{transform:scale(1.14)}86%,100%{transform:scale(1)}}
+/* versi kecil di dalam kotak "lagi baca struk" / "lagi upload" */
+.sa-box{width:66px;height:60px;flex:none;position:relative}
+.sa-box .split-anim{position:absolute;left:0;top:0;transform:scale(.3);transform-origin:0 0}
+/* di kotak berlatar terang struk putih tenggelam, jadi versi kecil pakai struk biru */
+.sa-box .sa-struk{background:var(--accent)}
+.sa-box .sa-l{background:rgba(255,255,255,.55)}
+.sa-box .sa-av{border-color:var(--paper)}
+/* gerakan dikurangi: tampilkan keadaan "sudah terbagi" tanpa bergerak */
+@media (prefers-reduced-motion:reduce){
+  .sa-paper,.sa-amt,.sa-av{animation:none}
+  .sa-c{animation:none;opacity:1;transform:translate(calc(var(--dx) * .55),calc(var(--dy) * .55))}
+  .pane.enter>*,.toast.show{animation:none}
+}
 /* catat cepat: warna tombol sama dengan tag kategorinya */
 .quick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .qbtn{background:var(--tb);color:var(--tf);border-color:transparent;min-height:44px}
@@ -236,8 +328,19 @@ img{max-width:100%}
 </style>
 </head>
 <body>
+<div id="splash" class="splash" role="status">
+  <div class="split-anim" aria-hidden="true">
+    <span class="sa-av a1"></span><span class="sa-av a2"></span><span class="sa-av a3"></span><span class="sa-av a4"></span>
+    <div class="sa-paper"><div class="sa-struk"><span class="sa-l"></span><span class="sa-l s"></span><b class="sa-amt">Rp120rb</b><span class="sa-l"></span><span class="sa-l s"></span></div></div>
+    <span class="sa-c c1">30rb</span><span class="sa-c c2">30rb</span><span class="sa-c c3">30rb</span><span class="sa-c c4">30rb</span>
+  </div>
+  <b class="splash-word"><span>Patungan</span> Asik</b>
+  <span class="splash-msg" id="splashMsg">Lagi buka laci struk…</span>
+  <button class="btn" id="splashSkip" hidden>Buka pakai data di HP ini</button>
+</div>
 
 <div class="wrap" id="app"></div>
+<div id="toast" class="toast" role="status" hidden></div>
 <div id="editor"></div>
 <div id="viewer" class="viewer" hidden><img id="viewer-img" alt="Bukti transfer"><span class="viewer-x">Tap di mana aja buat tutup</span></div>
 
@@ -245,6 +348,40 @@ img{max-width:100%}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
+/* ---------- iPhone & HP: deteksi, getar halus, toast, layar pembuka ---------- */
+const IS_IOS=/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const STANDALONE=navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
+const CAN_SHARE=typeof navigator.share==='function';
+const REDUCED=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+const TIP_KEY='patungan-ios-tip';
+// Android: navigator.vibrate. iOS 18+: Safari tidak punya vibrate, tapi menggeser
+// <input type="checkbox" switch> memicu getar bawaan; label tersembunyinya yang diklik.
+let hapEl=null;
+function haptic(){
+  try{
+    if(navigator.vibrate){navigator.vibrate(10);return}
+    if(!IS_IOS)return;
+    if(!hapEl){hapEl=document.createElement('label');hapEl.setAttribute('aria-hidden','true');
+      hapEl.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
+      const i=document.createElement('input');i.type='checkbox';i.setAttribute('switch','');i.tabIndex=-1;hapEl.appendChild(i);document.body.appendChild(hapEl)}
+    hapEl.click();
+  }catch(_){}
+}
+let toastT=null;
+function showToast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,2600)}
+// layar pembuka: minimal satu putaran animasi (≈2,3 detik), dan untuk link patungan bareng
+// bertahan sampai data dari server masuk. Setelah 10 detik muncul tombol untuk masuk saja.
+const SPLIT_HTML=document.querySelector('#splash .split-anim').outerHTML;
+const SPLASH_MIN=REDUCED?700:2300;
+let splashOff=false;
+function hideSplash(now){
+  if(splashOff)return;splashOff=true;
+  const el=document.getElementById('splash');if(!el)return;
+  setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),400)},now?0:Math.max(0,SPLASH_MIN-performance.now()));
+}
+setTimeout(()=>{if(splashOff)return;document.getElementById('splashMsg').textContent='Koneksi lambat, masih nunggu data patungan bareng…';
+  const b=document.getElementById('splashSkip');b.hidden=false;b.focus()},10000);
+document.getElementById('splashSkip').addEventListener('click',()=>{hideSplash(true);if(ROOM)leaveRoom('Data patungan bareng belum kebuka. Coba buka link-nya lagi nanti.')});
 const KEY='patungan-asik-v1';
 const CATS=[['makan','Makan'],['gofood','GoFood'],['ojol','Gojek/Grab'],['tol','Tol'],['bensin','Bensin'],['parkir','Parkir'],['main','Main'],['belanja','Belanja'],['lain','Lainnya']];
 const CAT=Object.fromEntries(CATS);
@@ -333,10 +470,10 @@ function route(){
   const h=location.hash,m=h.match(ROOM_RE),t=h.match(/^#t-([a-z0-9]{1,20})$/);
   confirmReset=false;payUI={open:null,busy:null,undo:null,msg:''};accUI=null;personMsg='';
   if(D)closeEditor();
-  if(m){VIEW='trip';CUR=null;if(m[1]!==ROOM)joinRoom(m[1]);else render();window.scrollTo(0,0);return}
+  if(m){VIEW='trip';CUR=null;if(m[1]!==ROOM){TAB='catat';joinRoom(m[1])}else render();window.scrollTo(0,0);return}
   if(ROOM)stopRoom();
   const trip=t&&LACI.trips.find(x=>x.id===t[1]);
-  if(trip){CUR=trip.id;S=trip.state;VIEW='trip';roomErr=''}else{CUR=null;VIEW='home'}
+  if(trip){if(CUR!==trip.id)TAB='catat';CUR=trip.id;S=trip.state;VIEW='trip';roomErr=''}else{CUR=null;VIEW='home'}
   render();window.scrollTo(0,0);
   if(focusTitle){focusTitle=false;const i=document.getElementById('trip');if(i)i.focus()}
 }
@@ -427,6 +564,7 @@ function slipData(){
   const {grand,tf}=summary();const paid=tf.filter(t=>payInfo(t).paid);
   return {grand,n:tf.length,paid:paid.length,sisa:tf.filter(t=>!payInfo(t).paid).reduce((a,t)=>a+t.v,0)};
 }
+function showTip(){if(!IS_IOS||STANDALONE)return false;try{return !localStorage.getItem(TIP_KEY)}catch(_){return false}}
 function renderHome(){
   const appEl=document.getElementById('app');
   const rows=LACI.trips.map(t=>({t,st:t.state,d:withS(t.state,slipData)}))
@@ -451,6 +589,7 @@ function renderHome(){
     <p class="tagline">Tiap acara jadi satu struk. Yang masih ada tagihan selalu di paling atas.</p>
   </header>
   ${roomErr?`<div class="warn">${esc(roomErr)}</div>`:''}
+  ${showTip()?`<div class="banner tip"><span>Pasang di iPhone biar kayak aplikasi: ketuk ${SV('<path d="M8 9H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2M16 6l-4-4-4 4M12 2v13"/>').replace('<svg','<svg role="img" aria-label="ikon Bagikan"').replace(' aria-hidden="true"','')} <b>Bagikan</b>, lalu pilih <b>Tambah ke Layar Utama</b>.</span><button class="btn sm ghost" data-act="tip-close">Tutup</button></div>`:''}
   <button class="btn primary big" data-act="new-trip">+ Acara baru</button>
   ${open.length?`<div class="due"><span>Belum lunas</span><b class="num">${rp(sisa)}</b><span>di ${open.length} acara</span></div>`:''}
   <section class="sec">
@@ -502,14 +641,23 @@ function payRow(x){
   const open=payUI.open===x.k;
   return `<div class="pay">${top}${accLine(x)}
     ${x.changed?`<div class="hint warnline">Sebelumnya ditandai lunas ${rp(x.p.amount)}, tapi nominalnya berubah. Upload bukti lagi kalau udah bayar yang baru.</div>`:''}
-    ${open?`<div class="upl">${payUI.busy===x.k?`<div class="scan-busy"><span class="spin" aria-hidden="true"></span><span>Lagi upload bukti…</span></div>`
+    ${open?`<div class="upl">${payUI.busy===x.k?`<div class="scan-busy"><span class="sa-box" aria-hidden="true">${SPLIT_HTML}</span><span>Lagi upload bukti…</span></div>`
       :`<span>Upload bukti transfer dulu biar ${esc(pName(x.from))} ketanda lunas.</span>
       <div class="actions"><label class="btn primary sm" for="proof-${x.k}">Pilih foto bukti</label><button class="btn ghost sm" data-act="pay-close">Batal</button></div>
       <input type="file" id="proof-${x.k}" class="proof-in" data-k="${x.k}" accept="image/*" hidden>`}
       ${payUI.msg?`<div class="warn">${esc(payUI.msg)}</div>`:''}</div>`:''}</div>`;
 }
+/* ---------- tab di dalam acara: Catat · Hasil · Bayar ----------
+   Ikon: pensil = mencatat, struk sobek = hasil hitungan, dompet centang = status bayar. */
+let TAB='catat',paneIn=null,tabDragEnd=0;
+const SV=d=>`<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+const TABS=[['catat','Catat',SV('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>')],
+  ['hasil','Hasil',SV('<path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/>')],
+  ['bayar','Bayar',SV('<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="m9 15 2 2 4-4"/>')]];
+function setTab(k){if(k===TAB||!TABS.some(t=>t[0]===k))return;TAB=k;paneIn=k;haptic();render();window.scrollTo(0,0)}
 function render(){
-  if(VIEW==='home'){renderHome();return}
+  document.body.classList.toggle('tabs-on',VIEW==='trip');
+  if(VIEW==='home'){renderHome();hideSplash();return}
   const ae=document.activeElement,appEl=document.getElementById('app');
   const fid=ae&&ae.id&&appEl.contains(ae)&&ae.tagName==='INPUT'?ae.id:null;
   let sel=null;try{if(fid)sel=[ae.selectionStart,ae.selectionEnd]}catch(_){}
@@ -518,17 +666,18 @@ function render(){
   const unpaid=pays.filter(x=>!x.paid),paidL=pays.filter(x=>x.paid);
   const pct=pays.length?Math.round(paidL.length/pays.length*100):0;
   const sisa=unpaid.reduce((a,x)=>a+x.v,0);
+  const pane=k=>`class="pane${paneIn===k?' enter':''}" data-pane="${k}" ${TAB===k?'':'hidden'}`;
   appEl.innerHTML=`
-  <a class="back" href="#">← Semua acara</a>
-  <header>
-    <div class="brand"><span>Patungan</span> Asik</div>
-    <input class="trip" id="trip" placeholder="Nama acara, misal: Main ke Puncak · Minggu" value="${esc(S.title)}">
+  <header class="trip-h">
+    <div class="trip-top"><a class="back" href="#" aria-label="Kembali ke laci struk">‹ Laci</a>
+      ${ROOM?`<span class="pill ${syncState==='ok'?'on':syncState==='err'?'off':''}">${syncState==='ok'?'Online bareng':syncState==='err'?'Offline':'Menyambung…'} · ${esc(ROOM)}</span>`:''}</div>
+    <input class="trip" id="trip" placeholder="Nama acara" aria-label="Nama acara" value="${esc(S.title)}" enterkeyhint="done">
     <div class="stats"><div class="stat"><small>Total</small><b class="num">${rp(grand)}</b></div><div class="stat"><small>Orang</small><b>${S.people.length}</b></div><div class="stat"><small>Catatan</small><b>${S.expenses.length}</b></div></div>
-    ${ROOM?`<div class="sync"><span class="pill ${syncState==='ok'?'on':syncState==='err'?'off':''}">${syncState==='ok'?'Online bareng':syncState==='err'?'Offline':'Menyambung…'} · kode ${esc(ROOM)}</span></div>`:''}
   </header>
   ${S.sample&&!ROOM?`<div class="banner"><span>Ini data contoh biar kelihatan cara kerjanya.</span><button class="btn sm" data-act="clear-sample">Kosongkan &amp; mulai</button></div>`:''}
-  ${shareBlock()}
 
+  <div ${pane('catat')}>
+  ${shareBlock()}
   <section class="sec">
     <div class="sec-head"><h2>Siapa aja yang ikut</h2></div>
     <div class="chips">${S.people.map(p=>`<span class="chip">${av(p.id)}${esc(p.name)}<button aria-label="Hapus ${esc(p.name)}" data-act="del-person" data-id="${p.id}">×</button></span>`).join('')||'<span class="hint">Belum ada orang. Tambah dulu di bawah.</span>'}</div>
@@ -537,15 +686,18 @@ function render(){
   </section>
 
   <section class="sec">
-    <div class="sec-head"><h2>Pengeluaran</h2><button class="btn primary sm" data-act="new-exp">+ Tambah</button></div>
+    <div class="sec-head"><h2>Pengeluaran</h2><span class="hint">${S.expenses.length} catatan</span></div>
+    <button class="btn primary big-add" data-act="new-exp">+ Catat pengeluaran</button>
     ${S.people.length?`<div class="quick"><span class="hint">Catat cepat:</span>${QUICK.map(c=>{const l=lastOf(c);
       return `<button class="btn sm qbtn c-${c}" data-act="quick" data-v="${c}">+ ${CAT[c]}${l?` <span class="num">${fmt(l.amt)}</span>`:''}</button>`}).join('')}</div>`:''}
     <div class="list">${S.expenses.map(e=>{const c=calc(e);const n=Object.keys(c.shares).length;
       return `<button class="exp" data-act="edit-exp" data-id="${e.id}"><span class="tag c-${CAT[e.cat]?e.cat:'lain'}">${esc(CAT[e.cat]||'Lainnya')}</span>
       <span class="t"><div class="n">${esc(e.name||'(tanpa nama)')}</div><div class="s">${esc(pName(e.payer))} bayar · ${e.mode==='item'?'per orang':'bagi rata'} · ${n} orang${c.disc>0?' · diskon '+rp(c.disc):''}</div></span>
-      <span class="a num">${rp(c.total)}</span></button>`}).join('')||`<div class="empty">Belum ada pengeluaran. Tap <b>+ Tambah</b> buat mulai nyatet.</div>`}</div>
+      <span class="a num">${rp(c.total)}</span></button>`}).join('')||`<div class="empty">Belum ada pengeluaran. Tap <b>+ Catat pengeluaran</b> buat mulai.</div>`}</div>
   </section>
+  </div>
 
+  <div ${pane('hasil')}>
   <section class="sec">
     <div class="struk">
       <h3>STRUK PATUNGAN</h3>
@@ -561,13 +713,16 @@ function render(){
       <div class="tf">${pays.length?pays.map(t=>`<div class="tf-row"><span class="who dotname">${dn(t.from)}<i>→</i>${dn(t.to)}</span><span class="dotname">${t.paid?'<span class="lunas-chip">Lunas</span>':''}<span class="amt">${rp(t.v)}</span></span></div>`).join(''):`<div class="lunas">Semua udah impas.</div>`}</div>
       <div class="dash"></div>
       <div class="actions" style="font-family:var(--f-body)">
-        <button class="btn primary" data-act="copy">${copied?'Tersalin ✓':'Salin buat WhatsApp'}</button>
+        ${CAN_SHARE?`<button class="btn primary" data-act="share-wa">Bagikan ke WhatsApp</button><button class="btn" data-act="copy">${copied?'Tersalin ✓':'Salin teks'}</button>`
+          :`<button class="btn primary" data-act="copy">${copied?'Tersalin ✓':'Salin buat WhatsApp'}</button>`}
         ${confirmReset?`<button class="btn danger" data-act="reset-yes">${ROOM?'Ya, keluar dari sesi':'Ya, hapus acara ini'}</button><button class="btn ghost" data-act="reset-no">Batal</button>`:`<button class="btn ghost" data-act="reset">${ROOM?'Keluar dari sesi':'Hapus acara ini'}</button>`}
       </div>
-      <textarea id="copybox" hidden readonly style="width:100%;height:160px;font-family:var(--f-mono);font-size:.8rem"></textarea>
+      <textarea id="copybox" hidden readonly style="width:100%;height:160px;font-family:var(--f-mono);font-size:16px"></textarea>
     </div>
   </section>
+  </div>
 
+  <div ${pane('bayar')}>
   <section class="sec" id="status">
     <div class="sec-head"><h2>Status bayar</h2>${pays.length?`<span class="hint num">${paidL.length}/${pays.length} lunas</span>`:''}</div>
     ${pays.length?`
@@ -576,7 +731,11 @@ function render(){
       ${paidL.length?`<div class="grp"><div class="grp-t">Sudah bayar</div>${paidL.map(payRow).join('')}</div>`:''}
       <div class="hint">Geser tombol di kanan kalau udah transfer, lalu upload foto bukti transfernya.</div>`
     :`<div class="empty">Belum ada yang perlu transfer.</div>`}
-  </section>`;
+  </section>
+  </div>
+  <nav class="tabbar" aria-label="Bagian acara"><div class="tabs" role="tablist">${TABS.map(([k,l,ico])=>`<button role="tab" data-tab="${k}" aria-selected="${TAB===k}">${ico}<span>${l}</span>${k==='bayar'&&unpaid.length?`<i class="tb-badge" aria-label="${unpaid.length} belum bayar">${unpaid.length}</i>`:''}</button>`).join('')}</div></nav>`;
+  paneIn=null;
+  if(!(ROOM&&syncState==='wait'))hideSplash();
   if(fid){const el=document.getElementById(fid);if(el){el.focus({preventScroll:true});if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(_){}}}
 }
 function waText(){
@@ -612,7 +771,13 @@ document.getElementById('app').addEventListener('submit',e=>{e.preventDefault();
   if(!n)return;if(S.people.some(p=>p.name.toLowerCase()===n.toLowerCase())){personMsg=`${n} udah ada di daftar.`;render();return}
   personMsg='';S.people.push({id:uid(),name:n});save();document.getElementById('pname').focus()});
 document.getElementById('app').addEventListener('click',async e=>{
+  const tb=e.target.closest('[data-tab]');if(tb){if(Date.now()-tabDragEnd>350)setTab(tb.dataset.tab);return}
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id;
+  if(a==='tip-close'){try{localStorage.setItem(TIP_KEY,'1')}catch(_){}render();return}
+  if(a==='share-wa'){navigator.share({text:waText()}).then(()=>haptic()).catch(err=>{
+      if(err&&err.name==='AbortError')return; // share sheet ditutup sendiri
+      navigator.clipboard.writeText(waText()).then(()=>showToast('Nggak bisa bagikan, teksnya udah disalin'),()=>showToast('Nggak bisa bagikan'))});return}
+  if(a==='pay-open'||a==='pay-undo')haptic();
   if(a==='del-person'){
     const used=S.expenses.filter(x=>x.payer===id);
     if(used.length){personMsg=`${pName(id)} masih jadi pembayar di "${used[0].name}". Ganti pembayarnya dulu.`;render();return}
@@ -647,7 +812,7 @@ document.getElementById('app').addEventListener('click',async e=>{
   if(a==='reset'){confirmReset=true;render()}
   if(a==='reset-no'){confirmReset=false;render()}
   if(a==='copy'){const t=waText();
-    try{await navigator.clipboard.writeText(t);copied=true;render();setTimeout(()=>{copied=false;render()},1800)}
+    try{await navigator.clipboard.writeText(t);copied=true;showToast('Tersalin, tinggal tempel di WhatsApp');render();setTimeout(()=>{copied=false;render()},1800)}
     catch(_){const box=document.getElementById('copybox');box.hidden=false;box.value=t;box.focus();box.select()}}
 });
 
@@ -727,7 +892,7 @@ function scanBlock(){
   if(!scanOK)return '';
   return `<div class="scan">
     <div class="scan-txt"><b>Foto struknya aja</b><span class="hint">Menu, harga, diskon, pajak dan ongkir keisi otomatis. Kamu tinggal pilih punya siapa.</span></div>
-    ${scan.busy?`<div class="scan-busy"><span class="spin" aria-hidden="true"></span><span>${esc(scan.msg)}</span><button class="btn sm ghost" data-act="scan-stop">Batal</button></div>`
+    ${scan.busy?`<div class="scan-busy"><span class="sa-box" aria-hidden="true">${SPLIT_HTML}</span><span>${esc(scan.msg)}</span><button class="btn sm ghost" data-act="scan-stop">Batal</button></div>`
     :`<div class="actions"><label class="btn primary" for="scan-cam">${CAM_ICON} Foto struk</label><label class="btn" for="scan-gal">Pilih dari galeri</label></div>
       <input type="file" id="scan-cam" accept="image/*" capture="environment" hidden>
       <input type="file" id="scan-gal" accept="image/jpeg,image/png,image/webp" hidden>
@@ -763,7 +928,8 @@ function renderEditor(first){
   const old=host.querySelector('.sheet');const st=old?old.scrollTop:0;
   const P=S.people;
   host.innerHTML=`<div class="ov" data-act="close-bg"><div class="sheet${first?' in':''}" role="dialog" aria-label="Pengeluaran">
-    <div class="sec-head"><h2>${editId?'Ubah pengeluaran':'Pengeluaran baru'}</h2><button class="btn ghost sm" data-act="close">Tutup</button></div>
+    <div class="sheet-top"><div class="grab" aria-hidden="true"></div>
+    <div class="sec-head"><h2>${editId?'Ubah pengeluaran':'Pengeluaran baru'}</h2><button class="btn ghost sm" data-act="close">Tutup</button></div></div>
     <div class="field"><label for="f-name">Buat apa</label><input id="f-name" class="in" data-f="name" value="${esc(D.name)}" placeholder="misal: Makan siang, Tol Cikampek"></div>
     <div class="field"><span class="lbl">Kategori</span><div class="pick">${CATS.map(([k,l])=>`<button class="cat c-${k}" data-act="cat" data-v="${k}" ${pressed(D.cat===k)}>${l}</button>`).join('')}</div></div>
     <div class="field"><span class="lbl">Yang bayar duluan</span><div class="pick">${P.map(p=>`<button data-act="payer" data-v="${p.id}" ${pressed(D.payer===p.id)}>${esc(p.name)}</button>`).join('')}</div></div>
@@ -849,6 +1015,7 @@ ed.addEventListener('click',e=>{
   if(e.target.classList.contains('ov')){closeEditor();return}
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,v=b.dataset.v;
   const tog=(arr,x)=>arr.includes(x)?arr.filter(y=>y!==x):[...arr,x];
+  if(['who','who-all','por','copy-item','part','part-all','payer','cat','mode'].includes(a))haptic();
   switch(a){
     case 'close':closeEditor();return;
     case 'cat':D.cat=v;if(!editId&&!D.amount&&!D.items.length)D.mode=FOOD.includes(v)?'item':'rata';break;
@@ -878,13 +1045,68 @@ ed.addEventListener('click',e=>{
       if(c.total<=0){saveMsg='Totalnya masih Rp 0.';break}
       if(D.mode==='item')D.items=D.items.filter(it=>it.name||it.price);
       const i=S.expenses.findIndex(x=>x.id===D.id);if(i>=0)S.expenses[i]=D;else S.expenses.push(D);
-      S.sample=false;closeEditor();save();return;}
+      const msg=`${D.name} ${rp(c.total)} tersimpan`;
+      S.sample=false;closeEditor();save();haptic();showToast(msg);return;}
     default:return;
   }
   renderEditor(false);
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&D)closeEditor()});
 document.getElementById('viewer').addEventListener('click',()=>{document.getElementById('viewer').hidden=true});
+
+/* ---------- gestur ----------
+   1) Geser kiri/kanan di isi acara = pindah tab. Sentuhan dari tepi layar diabaikan supaya
+      gestur "kembali" iOS tetap jalan; tabel, input dan pilihan nama juga diabaikan.
+   2) Tekan lalu geser di tab bar: stabilo ikut jari, getar tiap lewat tab, lepas untuk pindah.
+   3) Tarik pegangan sheet ke bawah untuk menutup editor. */
+const tabKeys=TABS.map(t=>t[0]);
+let sw=null;
+document.addEventListener('touchstart',e=>{
+  sw=null;if(VIEW!=='trip'||D||e.touches.length!==1)return;
+  const t=e.target,p=e.touches[0];
+  if(t.closest('input,textarea,.tbl-wrap,.tabbar,.pick,.linkbox,.quick,.acc'))return;
+  if(p.clientX<24||p.clientX>innerWidth-24)return;
+  sw={x:p.clientX,y:p.clientY,dir:null,dx:0};
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!sw)return;const p=e.touches[0],dx=p.clientX-sw.x,dy=p.clientY-sw.y;
+  if(!sw.dir){if(Math.abs(dx)<10&&Math.abs(dy)<10)return;sw.dir=Math.abs(dx)>Math.abs(dy)*1.4?'h':'v'}
+  sw.dx=dx;
+},{passive:true});
+document.addEventListener('touchend',()=>{
+  const s=sw;sw=null;if(!s||s.dir!=='h'||Math.abs(s.dx)<70)return;
+  const i=tabKeys.indexOf(TAB)+(s.dx<0?1:-1);if(i>=0&&i<tabKeys.length)setTab(tabKeys[i]);
+},{passive:true});
+document.addEventListener('touchcancel',()=>{sw=null},{passive:true});
+
+let td=null;
+document.addEventListener('pointerdown',e=>{const bar=e.target.closest('.tabs');if(!bar||e.button)return;td={bar,x:e.clientX,id:e.pointerId,on:false,hot:tabKeys.indexOf(TAB)}});
+window.addEventListener('pointermove',e=>{
+  if(!td||e.pointerId!==td.id)return;
+  if(!td.on){if(Math.abs(e.clientX-td.x)<8)return;td.on=true;td.bar.classList.add('drag')}
+  const r=td.bar.getBoundingClientRect(),h=Math.max(0,Math.min(tabKeys.length-1,Math.floor((e.clientX-r.left)/(r.width/tabKeys.length))));
+  if(h!==td.hot){td.hot=h;haptic()}
+  td.bar.querySelectorAll('button').forEach((b,i)=>b.classList.toggle('hot',i===h));
+});
+const tdEnd=e=>{
+  if(!td||e.pointerId!==td.id)return;const s=td;td=null;if(!s.on)return;
+  tabDragEnd=Date.now();s.bar.classList.remove('drag');s.bar.querySelectorAll('button').forEach(b=>b.classList.remove('hot'));
+  if(e.type==='pointerup')setTab(tabKeys[s.hot]);
+};
+window.addEventListener('pointerup',tdEnd);window.addEventListener('pointercancel',tdEnd);
+
+let sd=null;
+ed.addEventListener('touchstart',e=>{
+  const top=e.target.closest('.sheet-top');if(!top||e.target.closest('button'))return;
+  sd={sheet:top.closest('.sheet'),y:e.touches[0].clientY,dy:0};sd.sheet.style.transition='none';
+},{passive:true});
+ed.addEventListener('touchmove',e=>{if(!sd)return;sd.dy=Math.max(0,e.touches[0].clientY-sd.y);sd.sheet.style.transform=`translateY(${sd.dy}px)`},{passive:true});
+ed.addEventListener('touchend',()=>{
+  if(!sd)return;const s=sd;sd=null;
+  if(s.dy>110){haptic();closeEditor();return}
+  s.sheet.style.transition='transform .2s ease-out';s.sheet.style.transform='';
+},{passive:true});
+
 route();
 </script>
 </body>

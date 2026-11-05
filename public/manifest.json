@@ -1,0 +1,16 @@
+{
+  "name": "Patungan Asik",
+  "short_name": "Patungan",
+  "description": "Catat dan bagi patungan bareng teman. Tiap acara jadi satu struk.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2563EB",
+  "theme_color": "#FFFFFF",
+  "lang": "id",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
