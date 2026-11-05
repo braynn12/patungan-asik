@@ -11,18 +11,44 @@ rekening/e-wallet di tiap transfer, dan catat cepat tol/bensin/parkir pakai nomi
 
 ```
 patungan-asik/
-├─ public/index.html                     ← aplikasinya
-├─ netlify/edge-functions/scan-struk.js  ← perantara ke Gemini (API key aman di sini)
-└─ netlify.toml                          ← pengaturan Netlify
+  public/index.html                     aplikasinya
+  public/firebase-config.js             config Firebase buat patungan bareng (opsional)
+  lib/scan-core.js                      inti pembaca struk (dipakai Vercel & Netlify)
+  api/scan-struk.js                     pembungkus untuk Vercel
+  netlify/edge-functions/scan-struk.js  pembungkus untuk Netlify
+  vercel.json, netlify.toml             pengaturan hosting
 ```
 
-## 1. Ambil API key Gemini (gratis)
+API key AI cuma disimpan di pengaturan hosting, nggak pernah ada di kode atau di browser.
+
+## 1. Ambil API key AI (gratis)
+
+Groq dicoba duluan, Gemini jadi cadangan. Cukup salah satu, lebih aman dua-duanya.
+
+**Groq:** buka https://console.groq.com/keys, login, klik **Create API Key**, salin key-nya.
+
+**Gemini:**
 
 1. Buka https://aistudio.google.com/apikey dan login pakai akun Google.
 2. Klik **Create API key**, lalu salin key-nya.
 3. Jangan pernah taruh key ini di `index.html` atau di-commit ke GitHub.
 
-## 2. Deploy ke Netlify
+## 2a. Deploy ke Vercel (gratis, otomatis tiap push)
+
+1. Buka https://vercel.com, login pakai akun GitHub.
+2. **Add New → Project**, pilih repo `patungan-asik`, klik **Import**.
+3. Framework Preset: **Other**. Build Command dan Install Command biarkan kosong.
+   Output Directory sudah diatur `public` lewat `vercel.json`.
+4. Buka **Environment Variables**, tambahkan `GROQ_API_KEY` dan/atau `GEMINI_API_KEY`
+   (opsional: `GROQ_MODEL`, `GEMINI_MODEL`).
+5. Klik **Deploy**. Alamatnya jadi `nama-proyek.vercel.app`.
+6. Kalau API key ditambah/diganti setelah deploy: **Deployments → ⋯ → Redeploy** supaya kepakai.
+
+Catatan Vercel: paket Hobby untuk pemakaian pribadi/non-komersial. Batas waktu fungsi diatur 60 detik
+di `vercel.json` (baca struk biasanya 5–20 detik). Foto dikecilkan dulu di HP sebelum dikirim,
+jadi aman di bawah batas ukuran request Vercel.
+
+## 2b. Deploy ke Netlify
 
 Netlify Drop (drag & drop folder) **tidak** menjalankan function, jadi pakai salah satu cara ini.
 
