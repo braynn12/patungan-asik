@@ -157,7 +157,7 @@ td:first-child{white-space:normal;font-family:var(--f-body);font-weight:600}
 .sheet-foot{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom,0px));background:var(--bg);padding-block:10px;margin-bottom:-10px}
 .hint{color:var(--muted);font-size:.8rem}
 @media (max-width:420px){.item-top{grid-template-columns:1fr 92px 46px 30px}}
-@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+@media (prefers-reduced-motion:no-preference){.sheet.in{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 body{margin:0}
 .sync{position:relative}
 .pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border-radius:999px;padding:4px 11px;font-size:.78rem;font-weight:600}
@@ -194,6 +194,45 @@ body{margin:0}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 img{max-width:100%}
 [hidden]{display:none!important}
+/* Beranda "Laci Struk": tiap acara jadi struk kecil bergerigi, motif yang sama dengan struk hasil.
+   Acara yang belum lunas naik ke atas supaya yang perlu ditagih kelihatan duluan. */
+.tagline{margin:0;position:relative;font-weight:500;max-width:min(30ch,calc(100% - 96px))}
+.big{padding:14px 18px;font-size:1.05rem;width:100%;min-height:52px}
+.due{display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;background:var(--warn-bg);color:var(--warn-ink);padding:12px 14px;border-radius:12px;font-weight:600}
+.due b{font-size:1.3rem;color:var(--ink);background:linear-gradient(transparent 55%,var(--mark) 55%)}
+.slips{display:flex;flex-direction:column;gap:14px}
+.slip{display:block;color:var(--ink);text-decoration:none;border-radius:6px}
+.slip-in{background:var(--struk);padding:14px 16px 26px;display:flex;flex-direction:column;gap:8px;
+  -webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/16px 100%;
+  mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/16px 100%;transition:background-color .15s}
+.slip:hover .slip-in{background:#E1EBFF}
+.slip-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.slip-top b{font-family:var(--f-display);font-size:1.12rem;line-height:1.25;overflow-wrap:anywhere;min-width:0}
+.slip-meta{font-size:.84rem;color:var(--muted)}
+.slip-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.slip-total{font-size:1.3rem;font-weight:600}
+.slip-due{font-size:.86rem;color:var(--warn-ink);font-weight:600}
+.slip .dash{border-top-color:#C5D3EE}
+.slip .progress{height:8px;background:var(--paper)}
+.badge{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;background:var(--paper);color:var(--muted);border:1px solid var(--line);flex:none}
+.badge.ok{background:var(--good-soft);color:#0B6E4C;border-color:#B5E6D2}
+.back{align-self:flex-start;color:var(--accent-dark);font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;gap:6px;margin:-10px 0 -12px}
+.back:hover{text-decoration:underline}
+/* catat cepat: warna tombol sama dengan tag kategorinya */
+.quick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.qbtn{background:var(--tb);color:var(--tf);border-color:transparent;min-height:44px}
+.qbtn:hover{border-color:var(--tf)}
+/* rekening tujuan di baris transfer */
+.acc{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:.86rem}
+.acc-to{background:var(--soft);border:1px dashed #9FB7EE;border-radius:8px;padding:4px 8px;font-family:var(--f-mono);overflow-wrap:anywhere;min-width:0}
+.acc-form{display:flex;flex-direction:column;gap:6px}
+/* porsi per orang untuk menu yang qty-nya lebih dari satu */
+.porsi{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pst{display:inline-flex;align-items:center;gap:2px;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:2px 2px 2px 9px;font-weight:600;font-size:.86rem}
+.pst .x{width:40px;height:40px;font-size:1.1rem;background:transparent}
+.pst .x:disabled{opacity:.35;cursor:not-allowed}
+.pst b{min-width:18px;text-align:center}
+.pick.copy button{border-style:dashed}
 </style>
 </head>
 <body>
@@ -245,7 +284,7 @@ const num=x=>{const v=Number(x);return isFinite(v)?v:0};
 function cleanState(st){
   if(!st||!Array.isArray(st.people)||!Array.isArray(st.expenses))return null;
   const out={sample:!!st.sample,title:String(st.title||'').slice(0,80),payments:st.payments&&typeof st.payments==='object'?st.payments:{}};
-  out.people=st.people.filter(p=>p&&okId(p.id)).map(p=>({id:p.id,name:String(p.name||'?').slice(0,40)}));
+  out.people=st.people.filter(p=>p&&okId(p.id)).map(p=>({id:p.id,name:String(p.name||'?').slice(0,40),acc:String(p.acc||'').slice(0,80)}));
   out.expenses=st.expenses.filter(e=>e&&okId(e.id)&&okId(e.payer)).map(e=>({
     id:e.id,name:String(e.name||'').slice(0,60),cat:CAT[e.cat]?e.cat:'lain',payer:e.payer,mode:e.mode==='item'?'item':'rata',
     amount:num(e.amount),participants:(e.participants||[]).filter(okId),
@@ -259,23 +298,52 @@ function loadLocal(){let s=null;try{s=cleanState(JSON.parse(localStorage.getItem
 const ROOM_RE=/^#([a-z0-9]{6,12})$/;
 let ROOM=null,fdb=null,roomRef=null,unsubs=[],PAY={},syncState='',roomErr='',shareBusy=false,titleTimer=null;
 try{const c=window.FIREBASE_CONFIG;if(window.firebase&&c&&c.projectId&&!/^ISI_/.test(c.projectId)){firebase.initializeApp(c);fdb=firebase.firestore()}}catch(e){console.error(e);fdb=null}
-let S=loadLocal();
+/* ---------- laci: semua acara tersimpan di HP ----------
+   Dulu cuma satu acara (KEY). Saat pertama dibuka, acara lama itu dipindah jadi isi laci pertama. */
+const LACI_KEY='patungan-asik-laci-v1';
+function loadLaci(){
+  let L=null;try{L=JSON.parse(localStorage.getItem(LACI_KEY))}catch(e){}
+  if(!L||!Array.isArray(L.trips)){const now=Date.now();L={trips:[{id:uid(),state:loadLocal(),created:now,updated:now}],rooms:[]}}
+  L.trips=L.trips.filter(t=>t&&okId(t.id)).map(t=>({id:t.id,state:cleanState(t.state)||cleanState(blank()),created:num(t.created)||Date.now(),updated:num(t.updated)||Date.now()}));
+  L.rooms=Array.isArray(L.rooms)?L.rooms.filter(r=>r&&ROOM_RE.test('#'+r.code)).slice(0,20):[];
+  try{localStorage.setItem(LACI_KEY,JSON.stringify(L))}catch(e){}
+  return L;
+}
+let LACI=loadLaci(),CUR=null,VIEW='home',focusTitle=false;
+function saveLaci(){try{localStorage.setItem(LACI_KEY,JSON.stringify(LACI))}catch(e){}}
+let S=cleanState(blank());
+// hitung ringkasan acara lain tanpa membukanya: S ditukar sebentar
+function withS(st,fn){const k=S;S=st;try{return fn()}finally{S=k}}
 const stamp=()=>firebase.firestore.FieldValue.serverTimestamp();
 function persist(){
   if(ROOM&&roomRef){const {payments,...rest}=S;
     roomRef.set({state:JSON.stringify(rest),updatedAt:stamp()},{merge:true}).catch(err=>{console.error(err);syncState='err';roomErr='Gagal nyimpen ke server. Cek internet.';render()})}
-  else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+  else if(CUR){const t=LACI.trips.find(x=>x.id===CUR);if(t){t.state=S;t.updated=Date.now();saveLaci()}}
 }
 function save(){persist();render()}
-function leaveRoom(msg){
-  unsubs.forEach(f=>f());unsubs=[];ROOM=null;roomRef=null;PAY={};syncState='';roomErr=msg||'';S=loadLocal();
-  try{history.replaceState(null,'',location.pathname+location.search)}catch(_){}
-  render();
+function stopRoom(){unsubs.forEach(f=>f());unsubs=[];ROOM=null;roomRef=null;PAY={};syncState=''}
+function leaveRoom(msg){stopRoom();roomErr=msg||'';if(location.hash)location.hash='';else route()}
+function rememberRoom(){
+  let r=LACI.rooms.find(x=>x.code===ROOM);if(!r){r={code:ROOM};LACI.rooms.unshift(r)}
+  Object.assign(r,{title:S.title,total:summary().grand,people:S.people.length,n:S.expenses.length,updated:Date.now()});saveLaci();
+}
+/* ---------- navigasi lewat hash, jadi tombol kembali di HP balik ke laci ----------
+   #kode = patungan bareng, #t-id = acara di HP ini, kosong = beranda */
+function route(){
+  const h=location.hash,m=h.match(ROOM_RE),t=h.match(/^#t-([a-z0-9]{1,20})$/);
+  confirmReset=false;payUI={open:null,busy:null,undo:null,msg:''};accUI=null;personMsg='';
+  if(D)closeEditor();
+  if(m){VIEW='trip';CUR=null;if(m[1]!==ROOM)joinRoom(m[1]);else render();window.scrollTo(0,0);return}
+  if(ROOM)stopRoom();
+  const trip=t&&LACI.trips.find(x=>x.id===t[1]);
+  if(trip){CUR=trip.id;S=trip.state;VIEW='trip';roomErr=''}else{CUR=null;VIEW='home'}
+  render();window.scrollTo(0,0);
+  if(focusTitle){focusTitle=false;const i=document.getElementById('trip');if(i)i.focus()}
 }
 function joinRoom(code){
-  if(!fdb){roomErr='Fitur patungan bareng belum aktif (Firebase belum diatur).';render();return}
+  if(!fdb){roomErr='Fitur patungan bareng belum aktif (Firebase belum diatur).';VIEW='home';render();return}
   unsubs.forEach(f=>f());unsubs=[];
-  ROOM=code;roomRef=fdb.collection('patungan').doc(code);syncState='wait';PAY={};roomErr='';render();
+  ROOM=code;roomRef=fdb.collection('patungan').doc(code);syncState='wait';PAY={};roomErr='';S=cleanState(blank());render();
   let first=true;
   unsubs.push(roomRef.onSnapshot(snap=>{
     if(!snap.exists){if(first)leaveRoom('Link patungan itu nggak ketemu. Cek lagi link-nya.');return}
@@ -284,7 +352,7 @@ function joinRoom(code){
     if(!st)return;
     const keepTitle=titleTimer?S.title:null;
     S={...st,payments:{}};if(keepTitle!=null)S.title=keepTitle;
-    syncState='ok';roomErr='';render();
+    syncState='ok';roomErr='';rememberRoom();render();
   },err=>{console.error(err);syncState='err';roomErr='Nggak bisa nyambung ke sesi bareng. Cek internet atau aturan Firestore.';render()}));
   unsubs.push(roomRef.collection('payments').onSnapshot(qs=>{PAY={};qs.forEach(d=>PAY[d.id]=d.data());render()},err=>console.error(err)));
 }
@@ -305,7 +373,7 @@ async function setPayment(k,obj){
   if(ROOM&&roomRef){const ref=roomRef.collection('payments').doc(k);if(obj)await ref.set(obj);else await ref.delete()}
   else{S.payments=S.payments||{};if(obj)S.payments[k]=obj;else delete S.payments[k];persist();render()}
 }
-window.addEventListener('hashchange',()=>{const m=location.hash.match(ROOM_RE);if(m&&m[1]!==ROOM)joinRoom(m[1]);else if(!m&&ROOM)leaveRoom()});
+window.addEventListener('hashchange',()=>route());
 const roomLink=()=>location.origin+location.pathname+'#'+ROOM;
 const safeImg=x=>typeof x==='string'&&x.length<600000&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(x)?x:'';
 const fmtTime=t=>{try{return new Date(t).toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}catch(_){return ''}};
@@ -352,7 +420,64 @@ function summary(){
 }
 
 /* ---------- tampilan utama ---------- */
-let personMsg='',confirmReset=false,copied=false,linkCopied=false,payUI={open:null,busy:null,undo:null,msg:''};
+let personMsg='',confirmReset=false,copied=false,linkCopied=false,payUI={open:null,busy:null,undo:null,msg:''},accUI=null,accCopied=null;
+const fmtDay=t=>{try{return new Date(t).toLocaleDateString('id-ID',{day:'numeric',month:'short'})}catch(_){return ''}};
+// ringkasan satu acara untuk kartu di laci
+function slipData(){
+  const {grand,tf}=summary();const paid=tf.filter(t=>payInfo(t).paid);
+  return {grand,n:tf.length,paid:paid.length,sisa:tf.filter(t=>!payInfo(t).paid).reduce((a,t)=>a+t.v,0)};
+}
+function renderHome(){
+  const appEl=document.getElementById('app');
+  const rows=LACI.trips.map(t=>({t,st:t.state,d:withS(t.state,slipData)}))
+    .sort((a,b)=>(b.d.sisa>0)-(a.d.sisa>0)||b.t.updated-a.t.updated);
+  const open=rows.filter(x=>x.d.sisa>0),sisa=open.reduce((a,x)=>a+x.d.sisa,0);
+  const card=x=>{const {t,st,d}=x,pct=d.n?Math.round(d.paid/d.n*100):0;
+    const badge=st.sample?'<span class="badge">Contoh</span>':!st.expenses.length?'<span class="badge">Kosong</span>':d.n&&d.paid===d.n?'<span class="badge ok">Lunas semua</span>':!d.n?'<span class="badge ok">Impas</span>':'';
+    return `<a class="slip" href="#t-${t.id}"><div class="slip-in">
+      <div class="slip-top"><b>${esc(st.title||'Tanpa judul')}</b>${badge}</div>
+      <div class="slip-meta">${st.people.length} orang · ${st.expenses.length} catatan · ${esc(fmtDay(t.updated))}</div>
+      <div class="dash"></div>
+      <div class="slip-row"><span class="slip-total num">${rp(d.grand)}</span>${d.n?`<span class="hint num">${d.paid}/${d.n} transfer lunas</span>`:''}</div>
+      ${d.n&&d.paid<d.n?`<div class="progress" aria-hidden="true"><span style="width:${pct}%"></span></div><div class="slip-due">Sisa belum lunas <span class="num">${rp(d.sisa)}</span></div>`:''}
+    </div></a>`};
+  const rooms=fdb&&LACI.rooms.length?`<section class="sec"><div class="sec-head"><h2>Patungan bareng</h2><span class="hint">angka dari terakhir dibuka</span></div><div class="slips">${LACI.rooms.map(r=>`<a class="slip" href="#${esc(r.code)}"><div class="slip-in">
+      <div class="slip-top"><b>${esc(r.title||'Tanpa judul')}</b><span class="badge">Bareng · ${esc(r.code)}</span></div>
+      <div class="slip-meta">${num(r.people)} orang · ${num(r.n)} catatan · ${esc(fmtDay(r.updated))}</div>
+      <div class="dash"></div><div class="slip-row"><span class="slip-total num">${rp(num(r.total))}</span></div></div></a>`).join('')}</div></section>`:'';
+  appEl.innerHTML=`
+  <header>
+    <div class="brand"><span>Patungan</span> Asik</div>
+    <p class="tagline">Tiap acara jadi satu struk. Yang masih ada tagihan selalu di paling atas.</p>
+  </header>
+  ${roomErr?`<div class="warn">${esc(roomErr)}</div>`:''}
+  <button class="btn primary big" data-act="new-trip">+ Acara baru</button>
+  ${open.length?`<div class="due"><span>Belum lunas</span><b class="num">${rp(sisa)}</b><span>di ${open.length} acara</span></div>`:''}
+  <section class="sec">
+    <div class="sec-head"><h2>Laci struk</h2><span class="hint">${rows.length} acara</span></div>
+    ${rows.length?`<div class="slips">${rows.map(card).join('')}</div>`:`<div class="empty">Laci masih kosong. Tap <b>+ Acara baru</b> buat mulai nyatet patungan.</div>`}
+  </section>
+  ${rooms}
+  <p class="hint">Acara tersimpan di browser HP ini saja. Kalau data browser dihapus, laci ikut kosong, jadi kirim hasilnya ke grup lewat <b>Salin buat WhatsApp</b>.</p>`;
+}
+// pengeluaran terakhir dengan kategori ini: dari acara yang sedang dibuka dulu, lalu acara lain
+const QUICK=['tol','bensin','parkir'];
+function lastOf(cat){
+  const pools=[S,...LACI.trips.filter(t=>t.id!==CUR).sort((a,b)=>b.updated-a.updated).map(t=>t.state)];
+  for(const st of pools)for(let i=st.expenses.length-1;i>=0;i--){const e=st.expenses[i];if(e.cat!==cat)continue;
+    const amt=e.mode==='rata'?e.amount:withS(st,()=>calc(e).total);if(amt>0)return {amt,payer:st===S?e.payer:null}}
+  return null;
+}
+const accNum=s=>{const m=String(s).match(/\d[\d\s.-]{4,}\d/);return m?m[0].replace(/\D/g,''):String(s)};
+function accLine(x){
+  const p=S.people.find(q=>q.id===x.to);if(!p)return '';
+  if(accUI===x.k)return `<form class="acc-form" id="accf" data-id="${p.id}"><label class="lbl" for="acc-in">Rekening / e-wallet ${esc(p.name)}</label>
+    <input class="in" id="acc-in" value="${esc(p.acc)}" placeholder="misal BCA 1234567890 a.n. ${esc(p.name)}" autocomplete="off">
+    <div class="actions"><button class="btn primary sm" type="submit">Simpan</button><button class="btn ghost sm" type="button" data-act="acc-cancel">Batal</button></div>
+    <span class="hint">${ROOM?'Kelihatan oleh semua yang punya link patungan ini.':'Ikut terkirim di teks WhatsApp biar yang transfer nggak perlu nanya.'}</span></form>`;
+  return p.acc?`<div class="acc"><span class="hint">Ke</span><span class="acc-to">${esc(p.acc)}</span><button class="btn sm" data-act="acc-copy" data-id="${p.id}">${accCopied===p.id?'Tersalin ✓':'Salin nomor'}</button><button class="btn ghost sm" data-act="acc-edit" data-k="${x.k}">Ubah</button></div>`
+    :`<div class="acc"><button class="btn ghost sm" data-act="acc-edit" data-k="${x.k}">+ Isi rekening/e-wallet ${esc(p.name)}</button></div>`;
+}
 function payInfo(t){const k=t.from+'_'+t.to;const p=(ROOM?PAY:(S.payments||{}))[k];
   const paid=!!(p&&p.paid&&p.amount===t.v);const changed=!!(p&&p.paid&&p.amount!==t.v);return {k,p,paid,changed}}
 function shareBlock(){
@@ -375,7 +500,7 @@ function payRow(x){
     <div class="pay-meta">${pf?`<button class="proof-thumb" data-act="view-proof" data-k="${x.k}" aria-label="Lihat bukti transfer"><img src="${pf}" alt=""></button>`:''}<span class="hint">Lunas${x.p.at?' · '+esc(fmtTime(x.p.at)):''}${pf?' · tap foto buat lihat bukti':''}</span></div>
     ${payUI.undo===x.k?`<div class="upl"><span>Batalkan status lunas ${esc(pName(x.from))}?</span><div class="actions"><button class="btn danger sm" data-act="pay-undo-yes" data-k="${x.k}">Ya, batalkan</button><button class="btn ghost sm" data-act="pay-undo-no">Nggak jadi</button></div></div>`:''}</div>`;
   const open=payUI.open===x.k;
-  return `<div class="pay">${top}
+  return `<div class="pay">${top}${accLine(x)}
     ${x.changed?`<div class="hint warnline">Sebelumnya ditandai lunas ${rp(x.p.amount)}, tapi nominalnya berubah. Upload bukti lagi kalau udah bayar yang baru.</div>`:''}
     ${open?`<div class="upl">${payUI.busy===x.k?`<div class="scan-busy"><span class="spin" aria-hidden="true"></span><span>Lagi upload bukti…</span></div>`
       :`<span>Upload bukti transfer dulu biar ${esc(pName(x.from))} ketanda lunas.</span>
@@ -384,6 +509,7 @@ function payRow(x){
       ${payUI.msg?`<div class="warn">${esc(payUI.msg)}</div>`:''}</div>`:''}</div>`;
 }
 function render(){
+  if(VIEW==='home'){renderHome();return}
   const ae=document.activeElement,appEl=document.getElementById('app');
   const fid=ae&&ae.id&&appEl.contains(ae)&&ae.tagName==='INPUT'?ae.id:null;
   let sel=null;try{if(fid)sel=[ae.selectionStart,ae.selectionEnd]}catch(_){}
@@ -393,6 +519,7 @@ function render(){
   const pct=pays.length?Math.round(paidL.length/pays.length*100):0;
   const sisa=unpaid.reduce((a,x)=>a+x.v,0);
   appEl.innerHTML=`
+  <a class="back" href="#">← Semua acara</a>
   <header>
     <div class="brand"><span>Patungan</span> Asik</div>
     <input class="trip" id="trip" placeholder="Nama acara, misal: Main ke Puncak · Minggu" value="${esc(S.title)}">
@@ -411,6 +538,8 @@ function render(){
 
   <section class="sec">
     <div class="sec-head"><h2>Pengeluaran</h2><button class="btn primary sm" data-act="new-exp">+ Tambah</button></div>
+    ${S.people.length?`<div class="quick"><span class="hint">Catat cepat:</span>${QUICK.map(c=>{const l=lastOf(c);
+      return `<button class="btn sm qbtn c-${c}" data-act="quick" data-v="${c}">+ ${CAT[c]}${l?` <span class="num">${fmt(l.amt)}</span>`:''}</button>`}).join('')}</div>`:''}
     <div class="list">${S.expenses.map(e=>{const c=calc(e);const n=Object.keys(c.shares).length;
       return `<button class="exp" data-act="edit-exp" data-id="${e.id}"><span class="tag c-${CAT[e.cat]?e.cat:'lain'}">${esc(CAT[e.cat]||'Lainnya')}</span>
       <span class="t"><div class="n">${esc(e.name||'(tanpa nama)')}</div><div class="s">${esc(pName(e.payer))} bayar · ${e.mode==='item'?'per orang':'bagi rata'} · ${n} orang${c.disc>0?' · diskon '+rp(c.disc):''}</div></span>
@@ -433,7 +562,7 @@ function render(){
       <div class="dash"></div>
       <div class="actions" style="font-family:var(--f-body)">
         <button class="btn primary" data-act="copy">${copied?'Tersalin ✓':'Salin buat WhatsApp'}</button>
-        ${confirmReset?`<button class="btn danger" data-act="reset-yes">${ROOM?'Ya, keluar & mulai baru':'Ya, hapus semua'}</button><button class="btn ghost" data-act="reset-no">Batal</button>`:`<button class="btn ghost" data-act="reset">Mulai sesi baru</button>`}
+        ${confirmReset?`<button class="btn danger" data-act="reset-yes">${ROOM?'Ya, keluar dari sesi':'Ya, hapus acara ini'}</button><button class="btn ghost" data-act="reset-no">Batal</button>`:`<button class="btn ghost" data-act="reset">${ROOM?'Keluar dari sesi':'Hapus acara ini'}</button>`}
       </div>
       <textarea id="copybox" hidden readonly style="width:100%;height:160px;font-family:var(--f-mono);font-size:.8rem"></textarea>
     </div>
@@ -452,10 +581,11 @@ function render(){
 }
 function waText(){
   const {pp,grand,tf}=summary();
-  let t=`*Patungan Asik${S.title?' — '+S.title:''}*\nTotal: ${rp(grand)}\n\n*Rincian:*\n`;
+  let t=`*Patungan Asik${S.title?' · '+S.title:''}*\nTotal: ${rp(grand)}\n\n*Rincian:*\n`;
   S.expenses.forEach(e=>{t+=`• ${e.name} (${pName(e.payer)}): ${rp(calc(e).total)}\n`});
   t+=`\n*Bagian tiap orang:*\n`;S.people.forEach(p=>t+=`• ${p.name}: ${rp(pp[p.id].owe)}\n`);
-  t+=`\n*Transfer:*\n`+(tf.length?tf.map(x=>`${payInfo(x).paid?'✅':'⏳'} ${pName(x.from)} → ${pName(x.to)}: ${rp(x.v)}`).join('\n'):'Semua udah impas');
+  const accOf=id=>(S.people.find(p=>p.id===id)||{}).acc;
+  t+=`\n*Transfer:*\n`+(tf.length?tf.map(x=>`${payInfo(x).paid?'✅':'⏳'} ${pName(x.from)} → ${pName(x.to)}: ${rp(x.v)}`+(accOf(x.to)&&!payInfo(x).paid?`\n    ke ${accOf(x.to)}`:'')).join('\n'):'Semua udah impas');
   if(ROOM)t+=`\n\nUpdate & upload bukti bayar di sini:\n${roomLink()}`;
   return t;
 }
@@ -475,7 +605,10 @@ document.getElementById('app').addEventListener('change',async e=>{
     payUI={open:null,busy:null,undo:null,msg:''};render();
   }catch(err){console.error(err);payUI.busy=null;payUI.msg=err&&err.message==='size'?'Fotonya nggak bisa dipakai. Coba screenshot bukti transfer dalam format JPG/PNG.':'Gagal upload bukti. Cek internet lalu coba lagi.';render()}
 });
-document.getElementById('app').addEventListener('submit',e=>{e.preventDefault();const i=document.getElementById('pname');const n=i.value.trim();
+document.getElementById('app').addEventListener('submit',e=>{e.preventDefault();
+  if(e.target.id==='accf'){const p=S.people.find(x=>x.id===e.target.dataset.id);
+    if(p){p.acc=document.getElementById('acc-in').value.trim().slice(0,80);S.sample=false}accUI=null;save();return}
+  const i=document.getElementById('pname');const n=i.value.trim();
   if(!n)return;if(S.people.some(p=>p.name.toLowerCase()===n.toLowerCase())){personMsg=`${n} udah ada di daftar.`;render();return}
   personMsg='';S.people.push({id:uid(),name:n});save();document.getElementById('pname').focus()});
 document.getElementById('app').addEventListener('click',async e=>{
@@ -489,8 +622,17 @@ document.getElementById('app').addEventListener('click',async e=>{
   }
   if(a==='new-exp')openEditor(null);
   if(a==='edit-exp')openEditor(id);
+  if(a==='quick')openEditor(null,b.dataset.v);
+  if(a==='new-trip'){const now=Date.now(),t={id:uid(),state:cleanState(blank()),created:now,updated:now};
+    LACI.trips.unshift(t);saveLaci();roomErr='';focusTitle=true;location.hash='t-'+t.id}
   if(a==='clear-sample'){S=cleanState(blank());save()}
-  if(a==='reset-yes'){if(ROOM)leaveRoom();S=cleanState(blank());confirmReset=false;save()}
+  if(a==='reset-yes'){confirmReset=false;if(ROOM){leaveRoom();return}
+    LACI.trips=LACI.trips.filter(t=>t.id!==CUR);saveLaci();location.hash='';return}
+  if(a==='acc-edit'){accUI=b.dataset.k;render();const i=document.getElementById('acc-in');if(i)i.focus();return}
+  if(a==='acc-cancel'){accUI=null;render();return}
+  if(a==='acc-copy'){const p=S.people.find(x=>x.id===id);if(!p)return;
+    try{await navigator.clipboard.writeText(accNum(p.acc));accCopied=id;render();setTimeout(()=>{accCopied=null;render()},1800)}
+    catch(_){const el=b.parentElement.querySelector('.acc-to');const r=document.createRange();r.selectNodeContents(el);const s2=getSelection();s2.removeAllRanges();s2.addRange(r)}return}
   if(a==='share-start')startRoom();
   if(a==='share-leave')leaveRoom();
   if(a==='share-copy'){try{await navigator.clipboard.writeText(roomLink());linkCopied=true;render();setTimeout(()=>{linkCopied=false;render()},1800)}
@@ -510,14 +652,22 @@ document.getElementById('app').addEventListener('click',async e=>{
 });
 
 /* ---------- editor ---------- */
-let D=null,editId=null,confirmDel=false,saveMsg='';
-function openEditor(id){
+let D=null,editId=null,confirmDel=false,saveMsg='',quick=false;
+function openEditor(id,quickCat){
   if(!S.people.length){personMsg='Tambah orang dulu sebelum nyatet pengeluaran.';render();document.getElementById('pname').focus();return}
-  editId=id;confirmDel=false;saveMsg='';
+  editId=id;confirmDel=false;saveMsg='';quick=!!quickCat;
   const ex=S.expenses.find(x=>x.id===id);
   D=ex?JSON.parse(JSON.stringify(ex)):{id:uid(),name:'',cat:'makan',payer:S.people[0].id,mode:'item',amount:0,participants:S.people.map(p=>p.id),items:[],disc:{type:'pct',value:0,max:0},svc:0,tax:0,fee:0};
+  if(quickCat){
+    // catat cepat: nominal & pembayar ikut catatan terakhir kategori ini, dibagi rata ke semua
+    const l=lastOf(quickCat),lastE=S.expenses[S.expenses.length-1];
+    Object.assign(D,{name:CAT[quickCat],cat:quickCat,mode:'rata',amount:l?l.amt:0,
+      payer:l&&l.payer&&valid(l.payer)?l.payer:lastE&&valid(lastE.payer)?lastE.payer:S.people[0].id});
+  }
   renderEditor(true);
 }
+const cnt=(it,p)=>it.who.filter(x=>x===p).length;
+const uniq=a=>[...new Set(a)];
 function closeEditor(){if(scan.ctl)scan.ctl.abort();scan={busy:false,msg:'',err:false,ctl:null};D=null;document.getElementById('editor').innerHTML='';document.body.style.overflow=''}
 const pressed=v=>`aria-pressed="${v?'true':'false'}"`;
 const moneyIn=(f,v,ph='0',extra='')=>`<input class="in num" inputmode="numeric" data-f="${f}" value="${v?fmt(v):''}" placeholder="${ph}" ${extra}>`;
@@ -588,14 +738,31 @@ const itemRow=(it,shared)=>`<div class="item-top"><input class="in" data-item="$
   <input class="in num" inputmode="numeric" data-item="${it.id}" data-f="price" value="${it.price?fmt(it.price):''}" placeholder="Harga" aria-label="Harga">
   <input class="in num" inputmode="numeric" data-item="${it.id}" data-f="qty" value="${it.qty||''}" placeholder="Qty" aria-label="Jumlah">
   <button class="x" data-act="del-item" data-id="${it.id}" aria-label="Hapus menu">×</button></div>
-  ${shared?`<div class="pick sharepick${it.scan&&!it.who.length?' need':''}"><span class="hint">${it.scan?(it.who.length?'Punya:':'Punya siapa?'):'Dibagi ke:'}</span>${it.scan?`<button class="all" data-act="who-all" data-id="${it.id}">Semua</button>`:''}${S.people.map(p=>`<button data-act="who" data-id="${it.id}" data-v="${p.id}" ${pressed(it.who.includes(p.id))}>${esc(p.name)}</button>`).join('')}</div>`:''}`;
+  ${shared?`<div class="pick sharepick${it.scan&&!it.who.length?' need':''}"><span class="hint">${it.scan?(it.who.length?'Punya:':'Punya siapa?'):'Dibagi ke:'}</span>${it.scan?`<button class="all" data-act="who-all" data-id="${it.id}">Semua</button>`:''}${S.people.map(p=>`<button data-act="who" data-id="${it.id}" data-v="${p.id}" ${pressed(it.who.includes(p.id))}>${esc(p.name)}${cnt(it,p.id)>1?' ×'+cnt(it,p.id):''}</button>`).join('')}</div>`:''}
+  ${shared?porsiRow(it):''}`;
+// menu dengan qty > 1 yang dimakan beberapa orang: tiap orang bisa beda porsi (misal Cio 2 nasi, Dita 1)
+function porsiRow(it){
+  const ids=uniq(it.who.filter(valid));if((it.qty||0)<2||ids.length<2)return '';
+  const sum=ids.reduce((a,p)=>a+cnt(it,p),0),rata=ids.every(p=>cnt(it,p)===1);
+  return `<div class="porsi"><span class="hint">Porsi:</span>${ids.map(p=>{const c=cnt(it,p),n=esc(pName(p));
+    return `<span class="pst">${n}<button type="button" class="x" data-act="por" data-id="${it.id}" data-v="${p}" data-d="-1" aria-label="Kurangi porsi ${n}" ${c<=1?'disabled':''}>−</button><b class="num">${c}</b><button type="button" class="x" data-act="por" data-id="${it.id}" data-v="${p}" data-d="1" aria-label="Tambah porsi ${n}">+</button></span>`}).join('')}
+    <span class="hint${!rata&&sum!==it.qty?' warnline':''}">${rata?'dibagi rata':`dibagi sesuai porsi · ${sum} dari ${it.qty}`}</span></div>`;
+}
+// menu manual milik orang lain yang bisa ditambahkan ke orang ini dengan satu tap
+function copyMenus(pid){
+  const key=it=>it.name.trim().toLowerCase()+'|'+it.price;
+  const mine=new Set(D.items.filter(it=>!it.scan&&!isShared(it)&&it.who[0]===pid).map(key));
+  const seen=new Set(),out=[];
+  D.items.forEach(it=>{if(it.scan||isShared(it)||it.who[0]===pid||!it.name.trim()||!(it.price>0))return;const k=key(it);if(mine.has(k)||seen.has(k))return;seen.add(k);out.push(it)});
+  return out.slice(0,6);
+}
 let focusItem=null;
 const FOOD=['makan','gofood'];
 function renderEditor(first){
   const host=document.getElementById('editor');
   const old=host.querySelector('.sheet');const st=old?old.scrollTop:0;
   const P=S.people;
-  host.innerHTML=`<div class="ov" data-act="close-bg"><div class="sheet" role="dialog" aria-label="Pengeluaran">
+  host.innerHTML=`<div class="ov" data-act="close-bg"><div class="sheet${first?' in':''}" role="dialog" aria-label="Pengeluaran">
     <div class="sec-head"><h2>${editId?'Ubah pengeluaran':'Pengeluaran baru'}</h2><button class="btn ghost sm" data-act="close">Tutup</button></div>
     <div class="field"><label for="f-name">Buat apa</label><input id="f-name" class="in" data-f="name" value="${esc(D.name)}" placeholder="misal: Makan siang, Tol Cikampek"></div>
     <div class="field"><span class="lbl">Kategori</span><div class="pick">${CATS.map(([k,l])=>`<button class="cat c-${k}" data-act="cat" data-v="${k}" ${pressed(D.cat===k)}>${l}</button>`).join('')}</div></div>
@@ -615,6 +782,7 @@ function renderEditor(first){
         return `<div class="item person${own.length?'':' idle'}">
           <div class="p-head"><b class="dotname">${av(p.id)}${esc(p.name)}</b><span class="num">${sum?rp(sum):''}</span></div>
           ${own.map(it=>itemRow(it,false)).join('')}
+          ${(()=>{const cm=copyMenus(p.id);return cm.length?`<div class="pick copy"><span class="hint">Pesan yang sama:</span>${cm.map(it=>`<button data-act="copy-item" data-id="${it.id}" data-v="${p.id}">+ ${esc(it.name)} <span class="num">${fmt(it.price)}</span></button>`).join('')}</div>`:''})()}
           <button class="btn sm ghost add" data-act="add-item" data-v="${p.id}">+ Menu ${esc(p.name)}</button>
         </div>`}).join('')}
       <div class="item person shared">
@@ -643,6 +811,7 @@ function renderEditor(first){
   const sh=host.querySelector('.sheet');sh.scrollTop=st;
   updateCalc();
   if(focusItem){const i=host.querySelector(`[data-item="${focusItem}"][data-f="name"]`);if(i)i.focus({preventScroll:false});focusItem=null}
+  else if(first&&quick){const a=host.querySelector('#f-amt');if(a&&!D.amount)a.focus()} // catat cepat: keyboard tidak muncul kalau nominal sudah terisi
   else if(first&&!editId)host.querySelector('#f-name').focus();
 }
 function updateCalc(){
@@ -689,6 +858,11 @@ ed.addEventListener('click',e=>{
     case 'part-all':D.participants=S.people.map(p=>p.id);break;
     case 'who':{const it=D.items.find(x=>x.id===b.dataset.id);it.who=tog(it.who,v);break}
     case 'who-all':{const it=D.items.find(x=>x.id===b.dataset.id);it.who=S.people.map(p=>p.id);break}
+    case 'por':{const it=D.items.find(x=>x.id===b.dataset.id);if(!it)break;
+      if(+b.dataset.d>0)it.who.push(v);else if(cnt(it,v)>1)it.who.splice(it.who.lastIndexOf(v),1);break}
+    case 'copy-item':{const src=D.items.find(x=>x.id===b.dataset.id);if(!src)break;
+      const same=D.items.find(x=>!x.scan&&!isShared(x)&&x.who[0]===v&&x.name.trim().toLowerCase()===src.name.trim().toLowerCase()&&x.price===src.price);
+      if(same)same.qty=(same.qty||0)+1;else D.items.push({id:uid(),name:src.name,price:src.price,qty:1,who:[v],shared:false});break}
     case 'scan-stop':if(scan.ctl)scan.ctl.abort();return;
     case 'add-item':{const sh=v==='shared';const it={id:uid(),name:'',price:0,qty:1,who:sh?S.people.map(p=>p.id):[v],shared:sh};D.items.push(it);focusItem=it.id;break}
     case 'del-item':D.items=D.items.filter(x=>x.id!==b.dataset.id);break;
@@ -710,9 +884,8 @@ ed.addEventListener('click',e=>{
   renderEditor(false);
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&D)closeEditor()});
-render();
 document.getElementById('viewer').addEventListener('click',()=>{document.getElementById('viewer').hidden=true});
-{const m0=location.hash.match(ROOM_RE);if(m0)joinRoom(m0[1])}
+route();
 </script>
 </body>
 </html>

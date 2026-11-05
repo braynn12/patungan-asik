@@ -1,7 +1,11 @@
 # Patungan Asik
 
 Web app split bill buat jalan bareng teman: tol, bensin, makan, GoFood, Gojek, main.
-Bisa foto struk dan isinya kebaca otomatis lewat Gemini.
+Bisa foto struk dan isinya kebaca otomatis lewat AI (Groq dulu, Gemini sebagai cadangan).
+
+Halaman utamanya "Laci Struk": tiap acara jadi satu struk kecil, yang belum lunas di paling atas.
+Fitur bantuan: porsi beda per orang untuk satu menu, "Pesan yang sama" buat nyalin menu teman,
+rekening/e-wallet di tiap transfer, dan catat cepat tol/bensin/parkir pakai nominal terakhir.
 
 ## Isi folder
 
@@ -41,6 +45,8 @@ netlify deploy --prod
 
 ## 3. Pasang API key di Netlify
 
+Pasang `GROQ_API_KEY` (dicoba duluan) dan/atau `GEMINI_API_KEY` (cadangan). Langkahnya sama untuk keduanya.
+
 1. Buka site-nya di Netlify → **Site configuration → Environment variables**.
 2. Tambah variabel:
    - Key: `GEMINI_API_KEY`
@@ -69,7 +75,8 @@ Kalau `index.html` dibuka langsung dari file, fitur foto struk nggak jalan karen
 
 ## Catatan
 
-- Data patungan tersimpan di browser HP masing-masing (localStorage). Hasilnya dibagikan lewat tombol **Salin buat WhatsApp**.
+- Semua acara di laci tersimpan di browser HP masing-masing (localStorage). Hasilnya dibagikan lewat tombol **Salin buat WhatsApp**.
+- Patungan bareng (satu link diedit ramai-ramai) baru aktif setelah `public/firebase-config.js` diisi config Firebase.
 - Free tier Gemini punya batas request per menit/hari. Kalau kena, app bakal bilang jatahnya lagi penuh.
 - Di free tier, Google bisa memakai isi foto untuk mengembangkan produknya. Aman buat struk makan, jangan dipakai buat dokumen pribadi.
 - Siapa pun yang tahu link app-mu bisa memakai jatah Gemini-mu. Jangan sebar link-nya ke publik.
