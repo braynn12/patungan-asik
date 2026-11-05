@@ -325,6 +325,36 @@ body.tabs-on{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
 .pst .x:disabled{opacity:.35;cursor:not-allowed}
 .pst b{min-width:18px;text-align:center}
 .pick.copy button{border-style:dashed}
+/* ---------- konfirmasi bayar, riwayat, arsip ---------- */
+.pay.wait{background:var(--warn-bg);border-color:#F1DC9A}
+.wait-chip{font-family:var(--f-body);font-size:.72rem;font-weight:700;color:var(--warn-ink);background:var(--paper);border:1px solid #E9CF7A;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.hist summary{cursor:pointer;color:var(--accent-dark);font-weight:600;font-size:.84rem;min-height:44px;display:flex;align-items:center;width:max-content}
+.hist ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:.84rem;color:var(--muted)}
+.hist .num{color:var(--ink);font-size:.8rem}
+.arsip summary{cursor:pointer;font-weight:700;color:var(--muted);min-height:44px;display:flex;align-items:center;width:max-content}
+.arsip .slips{margin-top:6px}
+.arsip .slip-in{background:var(--soft)}
+@media (max-width:400px){.pay-top .wait-chip{grid-column:2;grid-row:1/3}}
+/* ---------- animasi berhasil: struk terbagi sekali lalu centang ---------- */
+.okfx{position:fixed;left:50%;top:40%;width:132px;height:120px;margin:-60px 0 0 -66px;background:var(--paper);border-radius:22px;box-shadow:0 12px 32px rgba(20,33,61,.18);z-index:45;pointer-events:none;display:grid;place-items:center;animation:okIn 1.7s ease both}
+.okfx .sa-box{width:88px;height:80px}
+.okfx .sa-box .split-anim{transform:scale(.4);animation:okDim .25s ease-out 1s both}
+.okfx .sa-paper{animation:none}
+.okfx .sa-amt{animation:saAmt 1.1s ease-in-out both}
+.okfx .sa-c{animation:saChip 1.1s both;animation-delay:calc(var(--d) - .5s)}
+.okfx .sa-av{animation:saAv 1.1s ease-out both;animation-delay:calc(var(--d) - .5s)}
+.ok-check{position:absolute;inset:0;display:grid;place-items:center}
+.ok-check svg{width:56px;height:56px;padding:12px;border-radius:50%;background:var(--good);fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.6);animation:okPop .35s cubic-bezier(.3,1.4,.5,1) 1s both}
+.ok-check path{stroke-dasharray:24;stroke-dashoffset:24;animation:okDraw .3s ease-out 1.15s both}
+@keyframes okIn{0%{opacity:0;transform:translateY(8px) scale(.96)}10%,85%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes okDim{to{opacity:.2}}
+@keyframes okPop{to{opacity:1;transform:none}}
+@keyframes okDraw{to{stroke-dashoffset:0}}
+/* confetti ringan saat semua lunas */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:45;overflow:hidden}
+.confetti i{position:absolute;top:-14px;height:12px;border-radius:2px;animation:fall 1.5s cubic-bezier(.25,.6,.4,1) both}
+@keyframes fall{to{transform:translate(var(--x),105vh) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){.okfx,.confetti{display:none}}
 </style>
 </head>
 <body>
@@ -344,9 +374,13 @@ body.tabs-on{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
 <div id="editor"></div>
 <div id="viewer" class="viewer" hidden><img id="viewer-img" alt="Bukti transfer"><span class="viewer-x">Tap di mana aja buat tutup</span></div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<script>
+// SDK Firebase (±300 KB) cuma dimuat kalau config sudah diisi; selama patungan bareng belum aktif,
+// aplikasi tidak perlu menunggu file dari gstatic sebelum tampil.
+(function(){const c=window.FIREBASE_CONFIG;if(c&&c.projectId&&!/^ISI_/.test(c.projectId))
+  document.write('<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"><\/script><script src="https://www.gstatic.com/firebasejs/10.12.2/firestore-compat.js"><\/script>')})();
+</script>
 <script>
 /* ---------- iPhone & HP: deteksi, getar halus, toast, layar pembuka ---------- */
 const IS_IOS=/iP(hone|od|ad)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -441,7 +475,7 @@ const LACI_KEY='patungan-asik-laci-v1';
 function loadLaci(){
   let L=null;try{L=JSON.parse(localStorage.getItem(LACI_KEY))}catch(e){}
   if(!L||!Array.isArray(L.trips)){const now=Date.now();L={trips:[{id:uid(),state:loadLocal(),created:now,updated:now}],rooms:[]}}
-  L.trips=L.trips.filter(t=>t&&okId(t.id)).map(t=>({id:t.id,state:cleanState(t.state)||cleanState(blank()),created:num(t.created)||Date.now(),updated:num(t.updated)||Date.now()}));
+  L.trips=L.trips.filter(t=>t&&okId(t.id)).map(t=>({id:t.id,state:cleanState(t.state)||cleanState(blank()),created:num(t.created)||Date.now(),updated:num(t.updated)||Date.now(),archived:!!t.archived}));
   L.rooms=Array.isArray(L.rooms)?L.rooms.filter(r=>r&&ROOM_RE.test('#'+r.code)).slice(0,20):[];
   try{localStorage.setItem(LACI_KEY,JSON.stringify(L))}catch(e){}
   return L;
@@ -468,7 +502,7 @@ function rememberRoom(){
    #kode = patungan bareng, #t-id = acara di HP ini, kosong = beranda */
 function route(){
   const h=location.hash,m=h.match(ROOM_RE),t=h.match(/^#t-([a-z0-9]{1,20})$/);
-  confirmReset=false;payUI={open:null,busy:null,undo:null,msg:''};accUI=null;personMsg='';
+  confirmReset=false;payUI={open:null,busy:null,undo:null,msg:''};accUI=null;personMsg='';reuseUI=false;restoreMsg=null;
   if(D)closeEditor();
   if(m){VIEW='trip';CUR=null;if(m[1]!==ROOM){TAB='catat';joinRoom(m[1])}else render();window.scrollTo(0,0);return}
   if(ROOM)stopRoom();
@@ -558,6 +592,53 @@ function summary(){
 
 /* ---------- tampilan utama ---------- */
 let personMsg='',confirmReset=false,copied=false,linkCopied=false,payUI={open:null,busy:null,undo:null,msg:''},accUI=null,accCopied=null;
+let lastAll=null,lastAllKey=null,reuseUI=false,restoreMsg=null;
+const curTrip=()=>CUR?LACI.trips.find(t=>t.id===CUR):null;
+/* ---------- cadangan: semua acara (atau satu acara) jadi satu file JSON ----------
+   Di iPhone file dibagikan lewat share sheet (Simpan ke File, AirDrop, WhatsApp);
+   kalau tidak bisa, diunduh biasa. Memulihkan menggabung: acara baru ditambah,
+   acara yang sama dipakai versi yang lebih baru, tidak ada yang dihapus. */
+const BACKUP_KEY='patungan-backup-at';
+const lastBackup=()=>{try{return num(localStorage.getItem(BACKUP_KEY))}catch(_){return 0}};
+async function exportData(trips,base,isBackup){
+  const data={app:'patungan-asik',v:1,at:Date.now(),trips:trips.map(t=>({id:t.id,state:t.state,created:t.created||Date.now(),updated:t.updated||Date.now(),archived:!!t.archived}))};
+  const slug=String(base).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'acara';
+  const fname=`${slug}-${new Date().toISOString().slice(0,10)}.json`;
+  const file=new File([JSON.stringify(data)],fname,{type:'application/json'});
+  const done=()=>{if(isBackup){try{localStorage.setItem(BACKUP_KEY,String(Date.now()))}catch(_){}}
+    haptic();showToast(isBackup?`Cadangan ${trips.length} acara siap disimpan`:'File acara siap dikirim');render()};
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:fname});done();return}}
+  catch(err){if(err&&err.name==='AbortError')return}
+  const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=fname;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);done();
+}
+function importData(text){
+  let d=null;try{d=JSON.parse(text)}catch(_){}
+  if(!d||d.app!=='patungan-asik'||!Array.isArray(d.trips))return {err:'File itu bukan cadangan Patungan Asik.'};
+  let add=0,upd=0,same=0;
+  d.trips.forEach(t=>{const st=t&&cleanState(t.state);if(!st||!okId(t.id))return;
+    const rec={id:t.id,state:st,created:num(t.created)||Date.now(),updated:num(t.updated)||Date.now(),archived:!!t.archived};
+    const i=LACI.trips.findIndex(x=>x.id===t.id);
+    if(i<0){LACI.trips.push(rec);add++}else if(rec.updated>LACI.trips[i].updated){LACI.trips[i]=rec;upd++}else same++});
+  saveLaci();
+  if(!add&&!upd)return {ok:same?`Semua ${same} acara di file itu udah ada di laci.`:'Nggak ada acara di file itu.'};
+  return {ok:[add?`${add} acara masuk ke laci`:'',upd?`${upd} acara diperbarui`:'',same?`${same} udah sama`:''].filter(Boolean).join(', ')+'.'};
+}
+/* ---------- animasi kecil saat berhasil ----------
+   Simpan: struk mini membagi totalnya sekali, lalu centang muncul (±1,6 detik, tidak bisa diklik).
+   Lunas semua: confetti ringan 22 potong warna aplikasi, 1,5 detik. Keduanya mati di "kurangi gerakan". */
+function successFx(){
+  if(REDUCED)return;document.querySelectorAll('.okfx').forEach(e=>e.remove());
+  const el=document.createElement('div');el.className='okfx';el.setAttribute('aria-hidden','true');
+  el.innerHTML=`<span class="sa-box">${SPLIT_HTML}</span><span class="ok-check"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>`;
+  document.body.appendChild(el);setTimeout(()=>el.remove(),1700);
+}
+function confetti(){
+  if(REDUCED)return;const cols=['#2563EB','#FFD84D','#10B981','#F97316','#E11D48'];
+  const box=document.createElement('div');box.className='confetti';box.setAttribute('aria-hidden','true');
+  box.innerHTML=Array.from({length:22},(_,i)=>`<i style="left:${4+Math.random()*92}%;background:${cols[i%5]};width:${6+Math.round(Math.random()*4)}px;--r:${Math.round(Math.random()*540-270)}deg;--x:${Math.round(Math.random()*80-40)}px;animation-delay:${Math.round(Math.random()*250)}ms"></i>`).join('');
+  document.body.appendChild(box);haptic();setTimeout(()=>box.remove(),2000);
+}
 const fmtDay=t=>{try{return new Date(t).toLocaleDateString('id-ID',{day:'numeric',month:'short'})}catch(_){return ''}};
 // ringkasan satu acara untuk kartu di laci
 function slipData(){
@@ -567,11 +648,13 @@ function slipData(){
 function showTip(){if(!IS_IOS||STANDALONE)return false;try{return !localStorage.getItem(TIP_KEY)}catch(_){return false}}
 function renderHome(){
   const appEl=document.getElementById('app');
-  const rows=LACI.trips.map(t=>({t,st:t.state,d:withS(t.state,slipData)}))
+  const all=LACI.trips.map(t=>({t,st:t.state,d:withS(t.state,slipData)}))
     .sort((a,b)=>(b.d.sisa>0)-(a.d.sisa>0)||b.t.updated-a.t.updated);
+  const rows=all.filter(x=>!x.t.archived),arch=all.filter(x=>x.t.archived);
   const open=rows.filter(x=>x.d.sisa>0),sisa=open.reduce((a,x)=>a+x.d.sisa,0);
+  const lb=lastBackup();
   const card=x=>{const {t,st,d}=x,pct=d.n?Math.round(d.paid/d.n*100):0;
-    const badge=st.sample?'<span class="badge">Contoh</span>':!st.expenses.length?'<span class="badge">Kosong</span>':d.n&&d.paid===d.n?'<span class="badge ok">Lunas semua</span>':!d.n?'<span class="badge ok">Impas</span>':'';
+    const badge=t.archived?'<span class="badge">Arsip</span>':st.sample?'<span class="badge">Contoh</span>':!st.expenses.length?'<span class="badge">Kosong</span>':d.n&&d.paid===d.n?'<span class="badge ok">Lunas semua</span>':!d.n?'<span class="badge ok">Impas</span>':'';
     return `<a class="slip" href="#t-${t.id}"><div class="slip-in">
       <div class="slip-top"><b>${esc(st.title||'Tanpa judul')}</b>${badge}</div>
       <div class="slip-meta">${st.people.length} orang · ${st.expenses.length} catatan · ${esc(fmtDay(t.updated))}</div>
@@ -594,10 +677,17 @@ function renderHome(){
   ${open.length?`<div class="due"><span>Belum lunas</span><b class="num">${rp(sisa)}</b><span>di ${open.length} acara</span></div>`:''}
   <section class="sec">
     <div class="sec-head"><h2>Laci struk</h2><span class="hint">${rows.length} acara</span></div>
-    ${rows.length?`<div class="slips">${rows.map(card).join('')}</div>`:`<div class="empty">Laci masih kosong. Tap <b>+ Acara baru</b> buat mulai nyatet patungan.</div>`}
+    ${rows.length?`<div class="slips">${rows.map(card).join('')}</div>`:`<div class="empty">${arch.length?'Semua acara ada di arsip. ':'Laci masih kosong. '}Tap <b>+ Acara baru</b> buat mulai nyatet patungan.</div>`}
+    ${arch.length?`<details class="arsip"><summary>Arsip · ${arch.length} acara</summary><div class="slips">${arch.map(card).join('')}</div></details>`:''}
   </section>
   ${rooms}
-  <p class="hint">Acara tersimpan di browser HP ini saja. Kalau data browser dihapus, laci ikut kosong, jadi kirim hasilnya ke grup lewat <b>Salin buat WhatsApp</b>.</p>`;
+  <section class="sec">
+    <div class="sec-head"><h2>Cadangan</h2><span class="hint">${lb?'terakhir '+esc(fmtDay(lb)):'belum pernah'}</span></div>
+    <p class="hint" style="margin:0">Acara cuma tersimpan di browser HP ini. Simpan cadangan ke File, Drive, atau chat WhatsApp sendiri, lalu pulihkan di HP atau browser baru.</p>
+    <div class="actions"><button class="btn primary" data-act="backup" ${LACI.trips.length?'':'disabled'}>Simpan cadangan</button><button class="btn" data-act="restore">Pulihkan dari file</button></div>
+    <input type="file" id="restore-in" accept=".json,application/json" hidden>
+    ${restoreMsg?`<div class="${restoreMsg.err?'warn':'okmsg'}" role="status">${esc(restoreMsg.err||restoreMsg.ok)}</div>`:''}
+  </section>`;
 }
 // pengeluaran terakhir dengan kategori ini: dari acara yang sedang dibuka dulu, lalu acara lain
 const QUICK=['tol','bensin','parkir'];
@@ -617,8 +707,21 @@ function accLine(x){
   return p.acc?`<div class="acc"><span class="hint">Ke</span><span class="acc-to">${esc(p.acc)}</span><button class="btn sm" data-act="acc-copy" data-id="${p.id}">${accCopied===p.id?'Tersalin ✓':'Salin nomor'}</button><button class="btn ghost sm" data-act="acc-edit" data-k="${x.k}">Ubah</button></div>`
     :`<div class="acc"><button class="btn ghost sm" data-act="acc-edit" data-k="${x.k}">+ Isi rekening/e-wallet ${esc(p.name)}</button></div>`;
 }
-function payInfo(t){const k=t.from+'_'+t.to;const p=(ROOM?PAY:(S.payments||{}))[k];
-  const paid=!!(p&&p.paid&&p.amount===t.v);const changed=!!(p&&p.paid&&p.amount!==t.v);return {k,p,paid,changed}}
+/* status transfer: belum → nunggu konfirmasi (bukti dikirim, wait:true) → lunas (penerima konfirmasi).
+   Catatan lama tanpa "wait" dianggap lunas, seperti sebelum fitur konfirmasi ada.
+   Riwayat (log) tetap disimpan walau statusnya dibatalkan atau ditolak. */
+const payRec=k=>(ROOM?PAY:(S.payments||{}))[k];
+function payInfo(t){const k=t.from+'_'+t.to;const p=payRec(k);
+  const sent=!!(p&&p.paid&&p.amount===t.v);const changed=!!(p&&p.paid&&p.amount!==t.v);
+  return {k,p,paid:sent&&!p.wait,pending:sent&&!!p.wait,changed}}
+const withLog=(p,a,v)=>[...(p&&Array.isArray(p.log)?p.log:[]),{t:Date.now(),a,v}].slice(-20);
+const LOGTXT={kirim:(x,l)=>`${pName(x.from)} kirim bukti transfer ${rp(l.v||0)}`,terima:x=>`${pName(x.to)} konfirmasi uangnya udah masuk`,
+  tolak:x=>`${pName(x.to)} bilang uangnya belum masuk`,batal:()=>'Status lunas dibatalkan'};
+function histBlock(x){
+  const log=x.p&&Array.isArray(x.p.log)?x.p.log:[];if(!log.length)return '';
+  return `<details class="hist"><summary>Riwayat pembayaran (${log.length})</summary><ol>${log.slice().reverse().map(l=>
+    `<li><span class="num">${esc(fmtTime(l.t))}</span> · ${esc((LOGTXT[l.a]||(()=>String(l.a)))(x,l))}</li>`).join('')}</ol></details>`;
+}
 function shareBlock(){
   if(!fdb)return '';
   if(!ROOM)return `<div class="share">
@@ -633,19 +736,27 @@ function shareBlock(){
 }
 function payRow(x){
   const pf=x.p&&safeImg(x.p.proof);
-  const top=`<div class="pay-top"><div class="pay-who">${dn(x.from)}<i>→</i>${dn(x.to)}</div><div class="pay-amt num">${rp(x.v)}</div>
-    <button class="tgl${x.paid?' on':''}" role="switch" aria-checked="${x.paid}" aria-label="${x.paid?'Sudah bayar':'Tandai sudah bayar'}: ${esc(pName(x.from))}" data-act="${x.paid?'pay-undo':'pay-open'}" data-k="${x.k}"><span></span></button></div>`;
-  if(x.paid)return `<div class="pay done">${top}
-    <div class="pay-meta">${pf?`<button class="proof-thumb" data-act="view-proof" data-k="${x.k}" aria-label="Lihat bukti transfer"><img src="${pf}" alt=""></button>`:''}<span class="hint">Lunas${x.p.at?' · '+esc(fmtTime(x.p.at)):''}${pf?' · tap foto buat lihat bukti':''}</span></div>
-    ${payUI.undo===x.k?`<div class="upl"><span>Batalkan status lunas ${esc(pName(x.from))}?</span><div class="actions"><button class="btn danger sm" data-act="pay-undo-yes" data-k="${x.k}">Ya, batalkan</button><button class="btn ghost sm" data-act="pay-undo-no">Nggak jadi</button></div></div>`:''}</div>`;
+  const who=`<div class="pay-who">${dn(x.from)}<i>→</i>${dn(x.to)}</div><div class="pay-amt num">${rp(x.v)}</div>`;
+  const thumb=pf?`<button class="proof-thumb" data-act="view-proof" data-k="${x.k}" aria-label="Lihat bukti transfer ${esc(pName(x.from))}"><img src="${pf}" alt=""></button>`:'';
+  if(x.paid)return `<div class="pay done"><div class="pay-top">${who}
+    <button class="tgl on" role="switch" aria-checked="true" aria-label="Lunas: ${esc(pName(x.from))}. Ketuk untuk membatalkan" data-act="pay-undo" data-k="${x.k}"><span></span></button></div>
+    <div class="pay-meta">${thumb}<span class="hint">Lunas, dikonfirmasi ${esc(pName(x.to))}${x.p.confAt?' · '+esc(fmtTime(x.p.confAt)):x.p.at?' · '+esc(fmtTime(x.p.at)):''}</span></div>
+    ${payUI.undo===x.k?`<div class="upl"><span>Batalkan status lunas ${esc(pName(x.from))}?</span><div class="actions"><button class="btn danger sm" data-act="pay-undo-yes" data-k="${x.k}">Ya, batalkan</button><button class="btn ghost sm" data-act="pay-undo-no">Nggak jadi</button></div></div>`:''}
+    ${histBlock(x)}</div>`;
+  if(x.pending)return `<div class="pay wait"><div class="pay-top">${who}<span class="wait-chip">Nunggu konfirmasi</span></div>
+    <div class="pay-meta">${thumb}<span class="hint">${esc(pName(x.from))} udah transfer${x.p.at?' · '+esc(fmtTime(x.p.at)):''}. ${esc(pName(x.to))}, cek mutasi dulu lalu konfirmasi.</span></div>
+    <div class="actions"><button class="btn primary sm" data-act="pay-confirm" data-k="${x.k}">Uangnya udah masuk</button><button class="btn ghost sm" data-act="pay-reject" data-k="${x.k}">Belum masuk</button></div>
+    ${histBlock(x)}</div>`;
   const open=payUI.open===x.k;
+  const top=`<div class="pay-top">${who}<button class="tgl" role="switch" aria-checked="false" aria-label="Tandai sudah transfer: ${esc(pName(x.from))}" data-act="pay-open" data-k="${x.k}"><span></span></button></div>`;
   return `<div class="pay">${top}${accLine(x)}
     ${x.changed?`<div class="hint warnline">Sebelumnya ditandai lunas ${rp(x.p.amount)}, tapi nominalnya berubah. Upload bukti lagi kalau udah bayar yang baru.</div>`:''}
     ${open?`<div class="upl">${payUI.busy===x.k?`<div class="scan-busy"><span class="sa-box" aria-hidden="true">${SPLIT_HTML}</span><span>Lagi upload bukti…</span></div>`
-      :`<span>Upload bukti transfer dulu biar ${esc(pName(x.from))} ketanda lunas.</span>
+      :`<span>Upload bukti transfer ${esc(pName(x.from))}. Setelah itu ${esc(pName(x.to))} tinggal konfirmasi uangnya udah masuk.</span>
       <div class="actions"><label class="btn primary sm" for="proof-${x.k}">Pilih foto bukti</label><button class="btn ghost sm" data-act="pay-close">Batal</button></div>
       <input type="file" id="proof-${x.k}" class="proof-in" data-k="${x.k}" accept="image/*" hidden>`}
-      ${payUI.msg?`<div class="warn">${esc(payUI.msg)}</div>`:''}</div>`:''}</div>`;
+      ${payUI.msg?`<div class="warn">${esc(payUI.msg)}</div>`:''}</div>`:''}
+    ${histBlock(x)}</div>`;
 }
 /* ---------- tab di dalam acara: Catat · Hasil · Bayar ----------
    Ikon: pensil = mencatat, struk sobek = hasil hitungan, dompet centang = status bayar. */
@@ -663,9 +774,14 @@ function render(){
   let sel=null;try{if(fid)sel=[ae.selectionStart,ae.selectionEnd]}catch(_){}
   const {pp,grand,tf}=summary();
   const pays=tf.map(t=>({...t,...payInfo(t)}));
-  const unpaid=pays.filter(x=>!x.paid),paidL=pays.filter(x=>x.paid);
+  const unpaid=pays.filter(x=>!x.paid&&!x.pending),pend=pays.filter(x=>x.pending),paidL=pays.filter(x=>x.paid);
   const pct=pays.length?Math.round(paidL.length/pays.length*100):0;
-  const sisa=unpaid.reduce((a,x)=>a+x.v,0);
+  const sisa=pays.filter(x=>!x.paid).reduce((a,x)=>a+x.v,0);
+  // confetti hanya saat status berubah jadi lunas semua, bukan saat acara yang sudah lunas dibuka
+  const allNow=pays.length>0&&pays.every(x=>x.paid),allKey=CUR||ROOM;
+  if(allKey===lastAllKey&&lastAll===false&&allNow)setTimeout(()=>{confetti();showToast('Semua udah lunas. Mantap!')},200);
+  lastAll=allNow;lastAllKey=allKey;
+  const ct=curTrip();
   const pane=k=>`class="pane${paneIn===k?' enter':''}" data-pane="${k}" ${TAB===k?'':'hidden'}`;
   appEl.innerHTML=`
   <header class="trip-h">
@@ -675,6 +791,7 @@ function render(){
     <div class="stats"><div class="stat"><small>Total</small><b class="num">${rp(grand)}</b></div><div class="stat"><small>Orang</small><b>${S.people.length}</b></div><div class="stat"><small>Catatan</small><b>${S.expenses.length}</b></div></div>
   </header>
   ${S.sample&&!ROOM?`<div class="banner"><span>Ini data contoh biar kelihatan cara kerjanya.</span><button class="btn sm" data-act="clear-sample">Kosongkan &amp; mulai</button></div>`:''}
+  ${ct&&ct.archived?`<div class="banner"><span>Acara ini ada di arsip.</span><button class="btn sm" data-act="archive">Keluarkan dari arsip</button></div>`:''}
 
   <div ${pane('catat')}>
   ${shareBlock()}
@@ -710,15 +827,27 @@ function render(){
       <div class="hint" style="font-family:var(--f-body)">Saldo plus = nanti nerima, minus = harus transfer.</div>
       <div class="dash"></div>
       <div class="eyebrow" style="font-family:var(--f-body)">Siapa transfer ke siapa</div>
-      <div class="tf">${pays.length?pays.map(t=>`<div class="tf-row"><span class="who dotname">${dn(t.from)}<i>→</i>${dn(t.to)}</span><span class="dotname">${t.paid?'<span class="lunas-chip">Lunas</span>':''}<span class="amt">${rp(t.v)}</span></span></div>`).join(''):`<div class="lunas">Semua udah impas.</div>`}</div>
+      <div class="tf">${pays.length?pays.map(t=>`<div class="tf-row"><span class="who dotname">${dn(t.from)}<i>→</i>${dn(t.to)}</span><span class="dotname">${t.paid?'<span class="lunas-chip">Lunas</span>':t.pending?'<span class="wait-chip">Nunggu konfirmasi</span>':''}<span class="amt">${rp(t.v)}</span></span></div>`).join(''):`<div class="lunas">Semua udah impas.</div>`}</div>
       <div class="dash"></div>
       <div class="actions" style="font-family:var(--f-body)">
         ${CAN_SHARE?`<button class="btn primary" data-act="share-wa">Bagikan ke WhatsApp</button><button class="btn" data-act="copy">${copied?'Tersalin ✓':'Salin teks'}</button>`
           :`<button class="btn primary" data-act="copy">${copied?'Tersalin ✓':'Salin buat WhatsApp'}</button>`}
-        ${confirmReset?`<button class="btn danger" data-act="reset-yes">${ROOM?'Ya, keluar dari sesi':'Ya, hapus acara ini'}</button><button class="btn ghost" data-act="reset-no">Batal</button>`:`<button class="btn ghost" data-act="reset">${ROOM?'Keluar dari sesi':'Hapus acara ini'}</button>`}
       </div>
       <textarea id="copybox" hidden readonly style="width:100%;height:160px;font-family:var(--f-mono);font-size:16px"></textarea>
     </div>
+  </section>
+  <section class="sec">
+    <div class="sec-head"><h2>Acara ini</h2></div>
+    <div class="actions">
+      ${ct?`<button class="btn" data-act="archive">${ct.archived?'Keluarkan dari arsip':'Arsipkan'}</button>`:''}
+      <button class="btn" data-act="reuse" aria-expanded="${reuseUI}">Pakai lagi</button>
+      <button class="btn" data-act="export-trip">Kirim file acara</button>
+    </div>
+    ${reuseUI?`<div class="upl"><span>Bikin acara baru dari "${esc(S.title||'Tanpa judul')}":</span>
+      <div class="actions"><button class="btn primary sm" data-act="reuse-people">Orangnya aja</button><button class="btn sm" data-act="reuse-all">Orang + catatan</button><button class="btn ghost sm" data-act="reuse-no">Batal</button></div>
+      <span class="hint">Rekening ikut disalin. Status bayar nggak.</span></div>`:''}
+    <span class="hint">Arsip menyimpan acara yang udah beres tanpa menuh-menuhin laci. "Kirim file acara" bikin file yang bisa dibuka di HP lain lewat <b>Pulihkan dari file</b>.</span>
+    <div class="actions">${confirmReset?`<button class="btn danger" data-act="reset-yes">${ROOM?'Ya, keluar dari sesi':'Ya, hapus acara ini'}</button><button class="btn ghost" data-act="reset-no">Batal</button>`:`<button class="btn ghost danger" data-act="reset">${ROOM?'Keluar dari sesi':'Hapus acara ini'}</button>`}</div>
   </section>
   </div>
 
@@ -727,13 +856,15 @@ function render(){
     <div class="sec-head"><h2>Status bayar</h2>${pays.length?`<span class="hint num">${paidL.length}/${pays.length} lunas</span>`:''}</div>
     ${pays.length?`
       <div class="progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Progres pembayaran"><span style="width:${pct}%"></span></div>
-      ${unpaid.length?`<div class="grp"><div class="grp-t">Belum bayar · sisa <span class="num">${rp(sisa)}</span></div>${unpaid.map(payRow).join('')}</div>`:`<div class="lunas">Semua udah lunas. Mantap!</div>`}
-      ${paidL.length?`<div class="grp"><div class="grp-t">Sudah bayar</div>${paidL.map(payRow).join('')}</div>`:''}
-      <div class="hint">Geser tombol di kanan kalau udah transfer, lalu upload foto bukti transfernya.</div>`
+      ${unpaid.length?`<div class="grp"><div class="grp-t">Belum transfer · sisa <span class="num">${rp(sisa)}</span></div>${unpaid.map(payRow).join('')}</div>`:''}
+      ${pend.length?`<div class="grp"><div class="grp-t">Nunggu konfirmasi penerima</div>${pend.map(payRow).join('')}</div>`:''}
+      ${!unpaid.length&&!pend.length?`<div class="lunas">Semua udah lunas. Mantap!</div>`:''}
+      ${paidL.length?`<div class="grp"><div class="grp-t">Lunas</div>${paidL.map(payRow).join('')}</div>`:''}
+      <div class="hint">Yang transfer: geser tombol, lalu upload bukti. Yang nerima: cek mutasi, lalu tekan <b>Uangnya udah masuk</b>.</div>`
     :`<div class="empty">Belum ada yang perlu transfer.</div>`}
   </section>
   </div>
-  <nav class="tabbar" aria-label="Bagian acara"><div class="tabs" role="tablist">${TABS.map(([k,l,ico])=>`<button role="tab" data-tab="${k}" aria-selected="${TAB===k}">${ico}<span>${l}</span>${k==='bayar'&&unpaid.length?`<i class="tb-badge" aria-label="${unpaid.length} belum bayar">${unpaid.length}</i>`:''}</button>`).join('')}</div></nav>`;
+  <nav class="tabbar" aria-label="Bagian acara"><div class="tabs" role="tablist">${TABS.map(([k,l,ico])=>`<button role="tab" data-tab="${k}" aria-selected="${TAB===k}">${ico}<span>${l}</span>${k==='bayar'&&unpaid.length+pend.length?`<i class="tb-badge" aria-label="${unpaid.length+pend.length} belum lunas">${unpaid.length+pend.length}</i>`:''}</button>`).join('')}</div></nav>`;
   paneIn=null;
   if(!(ROOM&&syncState==='wait'))hideSplash();
   if(fid){const el=document.getElementById(fid);if(el){el.focus({preventScroll:true});if(sel)try{el.setSelectionRange(sel[0],sel[1])}catch(_){}}}
@@ -744,7 +875,7 @@ function waText(){
   S.expenses.forEach(e=>{t+=`• ${e.name} (${pName(e.payer)}): ${rp(calc(e).total)}\n`});
   t+=`\n*Bagian tiap orang:*\n`;S.people.forEach(p=>t+=`• ${p.name}: ${rp(pp[p.id].owe)}\n`);
   const accOf=id=>(S.people.find(p=>p.id===id)||{}).acc;
-  t+=`\n*Transfer:*\n`+(tf.length?tf.map(x=>`${payInfo(x).paid?'✅':'⏳'} ${pName(x.from)} → ${pName(x.to)}: ${rp(x.v)}`+(accOf(x.to)&&!payInfo(x).paid?`\n    ke ${accOf(x.to)}`:'')).join('\n'):'Semua udah impas');
+  t+=`\n*Transfer:*\n`+(tf.length?tf.map(x=>{const pi=payInfo(x);return `${pi.paid?'✅':pi.pending?'🕓':'⏳'} ${pName(x.from)} → ${pName(x.to)}: ${rp(x.v)}${pi.pending?' (nunggu konfirmasi)':''}`+(accOf(x.to)&&!pi.paid&&!pi.pending?`\n    ke ${accOf(x.to)}`:'')}).join('\n'):'Semua udah impas');
   if(ROOM)t+=`\n\nUpdate & upload bukti bayar di sini:\n${roomLink()}`;
   return t;
 }
@@ -752,7 +883,11 @@ document.getElementById('app').addEventListener('input',e=>{if(e.target.id==='tr
   const sub=document.querySelector('.struk .sub');if(sub)sub.textContent=(S.title||'Tanpa judul')+' · total '+rp(summary().grand);
   clearTimeout(titleTimer);titleTimer=setTimeout(()=>{titleTimer=null;persist()},600)}});
 document.getElementById('app').addEventListener('change',async e=>{
-  const t=e.target;if(!t.classList||!t.classList.contains('proof-in')||!t.files||!t.files[0])return;
+  const t=e.target;
+  if(t.id==='restore-in'&&t.files&&t.files[0]){
+    try{restoreMsg=importData(await t.files[0].text())}catch(_){restoreMsg={err:'File-nya nggak bisa dibaca. Coba pilih ulang.'}}
+    if(restoreMsg.ok){haptic();successFx()}render();return}
+  if(!t.classList||!t.classList.contains('proof-in')||!t.files||!t.files[0])return;
   const k=t.dataset.k,file=t.files[0];
   const tr=summary().tf.find(x=>x.from+'_'+x.to===k);if(!tr)return;
   payUI.busy=k;payUI.msg='';render();
@@ -760,8 +895,8 @@ document.getElementById('app').addEventListener('change',async e=>{
     let proof=await shrink(file,1000,0.65);
     if(proof.length>380000)proof=await shrink(file,720,0.55);
     if(!safeImg(proof)||proof.length>380000)throw new Error('size');
-    await setPayment(k,{paid:true,amount:tr.v,from:tr.from,to:tr.to,proof,at:Date.now()});
-    payUI={open:null,busy:null,undo:null,msg:''};render();
+    await setPayment(k,{paid:true,wait:true,amount:tr.v,from:tr.from,to:tr.to,proof,at:Date.now(),log:withLog(payRec(k),'kirim',tr.v)});
+    payUI={open:null,busy:null,undo:null,msg:''};render();haptic();showToast(`Bukti terkirim. Tinggal ${pName(tr.to)} konfirmasi.`);
   }catch(err){console.error(err);payUI.busy=null;payUI.msg=err&&err.message==='size'?'Fotonya nggak bisa dipakai. Coba screenshot bukti transfer dalam format JPG/PNG.':'Gagal upload bukti. Cek internet lalu coba lagi.';render()}
 });
 document.getElementById('app').addEventListener('submit',e=>{e.preventDefault();
@@ -807,7 +942,24 @@ document.getElementById('app').addEventListener('click',async e=>{
   if(a==='pay-close'){payUI={open:null,busy:null,undo:null,msg:''};render()}
   if(a==='pay-undo'){payUI={open:null,busy:null,undo:k,msg:''};render()}
   if(a==='pay-undo-no'){payUI.undo=null;render()}
-  if(a==='pay-undo-yes'){payUI.undo=null;try{await setPayment(k,null)}catch(err){console.error(err)}render()}
+  if(a==='pay-undo-yes'){payUI.undo=null;const p=payRec(k);
+    try{await setPayment(k,p?{...p,paid:false,wait:false,log:withLog(p,'batal',p.amount)}:null)}catch(err){console.error(err)}render()}
+  if(a==='pay-confirm'||a==='pay-reject'){const p=payRec(k);if(!p)return;const ok=a==='pay-confirm';
+    try{await setPayment(k,ok?{...p,wait:false,confAt:Date.now(),log:withLog(p,'terima',p.amount)}:{...p,paid:false,wait:false,log:withLog(p,'tolak',p.amount)})}
+    catch(err){console.error(err);showToast('Gagal nyimpen. Coba lagi.');return}
+    haptic();if(ok)successFx();showToast(ok?`Lunas. ${pName(p.from)} → ${pName(p.to)} beres.`:`Ditandai belum masuk. ${pName(p.from)} bisa kirim bukti lagi.`);render()}
+  if(a==='archive'){const t=curTrip();if(!t)return;t.archived=!t.archived;saveLaci();haptic();
+    if(t.archived){showToast('Diarsipkan. Ada di bagian Arsip di laci.');location.hash=''}else{showToast('Dikeluarkan dari arsip');render()}return}
+  if(a==='reuse'){reuseUI=!reuseUI;render();return}
+  if(a==='reuse-no'){reuseUI=false;render();return}
+  if(a==='reuse-people'||a==='reuse-all'){reuseUI=false;
+    const st=cleanState(JSON.parse(JSON.stringify(S)));st.sample=false;st.payments={};st.title=S.title?S.title+' (lagi)':'';
+    if(a==='reuse-people')st.expenses=[];else st.expenses.forEach(x=>{x.id=uid();x.receiptTotal=0;x.items.forEach(it=>it.id=uid())});
+    const now=Date.now(),t={id:uid(),state:st,created:now,updated:now,archived:false};LACI.trips.unshift(t);saveLaci();haptic();
+    showToast(a==='reuse-all'?'Acara baru: orang dan catatan disalin':'Acara baru: orangnya disalin');focusTitle=true;location.hash='t-'+t.id;return}
+  if(a==='export-trip'){const t=curTrip();exportData([t?{...t,state:S}:{id:uid(),state:S}],S.title||'acara',false);return}
+  if(a==='backup'){exportData(LACI.trips,'patungan-asik-cadangan',true);return}
+  if(a==='restore'){restoreMsg=null;const i=document.getElementById('restore-in');i.value='';i.click();return}
   if(a==='view-proof'){const p=(ROOM?PAY:(S.payments||{}))[k];const src=p&&safeImg(p.proof);if(src){document.getElementById('viewer-img').src=src;document.getElementById('viewer').hidden=false}}
   if(a==='reset'){confirmReset=true;render()}
   if(a==='reset-no'){confirmReset=false;render()}
@@ -1046,7 +1198,7 @@ ed.addEventListener('click',e=>{
       if(D.mode==='item')D.items=D.items.filter(it=>it.name||it.price);
       const i=S.expenses.findIndex(x=>x.id===D.id);if(i>=0)S.expenses[i]=D;else S.expenses.push(D);
       const msg=`${D.name} ${rp(c.total)} tersimpan`;
-      S.sample=false;closeEditor();save();haptic();showToast(msg);return;}
+      S.sample=false;closeEditor();save();haptic();successFx();showToast(msg);return;}
     default:return;
   }
   renderEditor(false);
